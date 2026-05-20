@@ -294,6 +294,56 @@ h1.app-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin
   margin: 0 0 16px; padding: 8px 12px;
   background: var(--bg3); border-radius: 8px;
 }
+
+/* Kino-Liste im Detail-Sheet */
+.cinemas-section { margin: 24px 0 16px; }
+.cinemas-title {
+  font-size: 11px; font-weight: 600; color: var(--l2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.cinemas-sub {
+  font-size: 12px; color: var(--l2);
+  margin-bottom: 12px; line-height: 1.4;
+}
+.cinema-list {
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--bg3); border-radius: var(--r-card); overflow: hidden;
+}
+.cinema-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg2);
+  color: var(--l1); text-decoration: none;
+  transition: background 0.2s ease;
+  min-height: 56px;
+}
+@media (hover: hover) { .cinema-item:hover { background: var(--bg3); } }
+.cinema-icon {
+  font-size: 18px; flex-shrink: 0; width: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue);
+}
+.cinema-info { flex: 1; min-width: 0; }
+.cinema-name {
+  font-size: 14px; font-weight: 600; color: var(--l1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cinema-city {
+  font-size: 12px; color: var(--l2); margin-top: 2px;
+}
+.cinema-distance {
+  font-size: 12px; font-weight: 600; color: var(--l2);
+  flex-shrink: 0;
+}
+.cinema-arrow {
+  font-size: 14px; color: var(--l3); flex-shrink: 0;
+}
+.cinema-empty {
+  padding: 16px; text-align: center;
+  background: var(--bg2); border-radius: var(--r-card);
+  color: var(--l2); font-size: 14px;
+}
 .modal-backdrop {
   position: fixed; inset: 0; background: var(--bg); z-index: 200;
   display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -438,6 +488,23 @@ h1.app-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin
   const MAX_PAGES = 4;
   const DEFAULT_UPCOMING_DAYS = 180; // 6 Monate
   const ASSUMED_RUN_DAYS = 42; // ~6 Wochen geschätzte Spielzeit im Kino
+
+  // Schweizer Kinos, sortiert nach Luftlinien-Entfernung zu Solothurn.
+  // Distanz ist eine grobe Schätzung – reicht für die Sortier-Reihenfolge.
+  // url führt zur offiziellen Kino-/Anbieter-Website mit dem aktuellen Programm.
+  // Alle URLs wurden 2026-05-20 via Web-Suche verifiziert.
+  // Falls eine URL veraltet ist: hier direkt anpassen.
+  const SWISS_CINEMAS = [
+    { name: 'Capitol Solothurn',         city: 'Solothurn',    km: 0,  url: 'https://www.kinosolothurn.ch' },
+    { name: 'Palace Solothurn',          city: 'Solothurn',    km: 0,  url: 'https://www.kinosolothurn.ch' },
+    { name: 'Kino im Uferbau',           city: 'Solothurn',    km: 0,  url: 'https://www.kino-uferbau.ch' },
+    { name: 'Kino Rex',                  city: 'Grenchen',     km: 10, url: 'https://www.cinema4me.ch' },
+    { name: 'Capitol Olten',             city: 'Olten',        km: 25, url: 'https://cinema.youcinema.ch' },
+    { name: 'Lichtspiele Olten',         city: 'Olten',        km: 25, url: 'https://kino-lichtspiele.ch' },
+    { name: 'Apollo',                    city: 'Biel/Bienne',  km: 30, url: 'https://www.cinevital.ch/de/biel.html' },
+    { name: 'Lido',                      city: 'Biel/Bienne',  km: 30, url: 'https://www.cinevital.ch/de/biel.html' },
+    { name: 'blue Cinema Cinedome',      city: 'Muri b. Bern', km: 35, url: 'https://bluecinema.ch' }
+  ];
 
   const state = {
     apiKey: null,
@@ -805,6 +872,35 @@ h1.app-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin
           </div>
           <p class="trailer-hint">Wenn der Player nicht lädt (z.B. Fehler 153), öffne den Trailer über den Link oben → YouTube. Das passiert nur beim lokalen Test über file://, online (GitHub Pages) funktioniert die Einbettung normal.</p>
         ` : '<p class="sheet-overview" style="color: var(--l2);">Kein Trailer auf TMDB verlinkt.</p>'}
+        ${(() => {
+          // Schweizer Kinos: nur anzeigen wenn Film im DACH-Raum geführt wird.
+          const inDACH = sourceRegion && ['CH', 'DE', 'AT'].includes(sourceRegion);
+          if (!inDACH) {
+            return `
+              <div class="cinemas-section">
+                <div class="cinemas-title">Im Schweizer Kino</div>
+                <div class="cinema-empty">Dieser Film läuft (noch) nicht im Schweizer Kino.</div>
+              </div>`;
+          }
+          return `
+            <div class="cinemas-section">
+              <div class="cinemas-title">Im Schweizer Kino</div>
+              <div class="cinemas-sub">Sortiert nach Entfernung zu Solothurn. Klick öffnet die offizielle Kino-Website – das aktuelle Programm siehst du dort.</div>
+              <div class="cinema-list">
+                ${SWISS_CINEMAS.map(c => `
+                  <a class="cinema-item" href="${c.url}" target="_blank" rel="noopener">
+                    <div class="cinema-icon">🎬</div>
+                    <div class="cinema-info">
+                      <div class="cinema-name">${escapeHTML(c.name)}</div>
+                      <div class="cinema-city">${escapeHTML(c.city)}</div>
+                    </div>
+                    <div class="cinema-distance">${c.km === 0 ? '&lt; 1 km' : '~' + c.km + ' km'}</div>
+                    <div class="cinema-arrow">↗</div>
+                  </a>
+                `).join('')}
+              </div>
+            </div>`;
+        })()}
         <div class="sheet-actions">
           <button class="btn ${inWatch ? 'warning' : 'primary'}" id="sheet-watch-btn">${inWatch ? '★ In Watchlist' : '☆ Zur Watchlist'}</button>
           ${(daysUntilRelease(dateForMeta) ?? 1) <= 0
