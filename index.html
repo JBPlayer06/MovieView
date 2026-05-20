@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#000000">
+
+<!-- iOS Home-Screen / PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MovieView">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="MovieView">
+
+<!-- Icons -->
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<title>MovieView</title>
+<style>
+:root {
+  /* Dark Mode (Default) */
+  --bg: #000000;
+  --bg2: #1C1C1E;
+  --bg3: #2C2C2E;
+  --l1: #FFFFFF;
+  --l2: #A1A1A6;
+  --l3: #3A3A3C;
+  --blue: #0A84FF;
+  --green: #30D158;
+  --orange: #FF9F0A;
+  --red: #FF453A;
+  --header-bg: rgba(0, 0, 0, 0.85);
+  --star-bg: rgba(0, 0, 0, 0.6);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --r-card: 16px;
+  --r-btn: 12px;
+  --r-sheet: 22px;
+  --r-pill: 6px;
+}
+body.light {
+  /* Apple Light Mode (Empfehlung iOS Human Interface Guidelines) */
+  --bg: #F2F2F7;
+  --bg2: #FFFFFF;
+  --bg3: #E5E5EA;
+  --l1: #000000;
+  --l2: #6E6E73;
+  --l3: #C7C7CC;
+  --blue: #007AFF;
+  --green: #34C759;
+  --orange: #FF9500;
+  --red: #FF3B30;
+  --header-bg: rgba(242, 242, 247, 0.85);
+  --star-bg: rgba(255, 255, 255, 0.85);
+  --backdrop: rgba(0, 0, 0, 0.3);
+}
+html, body, .movie-card, .icon-btn, .sheet, .pill, .btn, .modal-card, .tab, .tabs, header {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+* {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none; /* iOS Long-Press-Menü unterdrücken */
+}
+input, textarea { -webkit-user-select: text; user-select: text; }
+html, body {
+  background: var(--bg);
+  color: var(--l1);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  min-height: 100vh;
+  min-height: 100dvh; /* iOS Safari: dynamic viewport, korrekte 100% inkl. Adressleiste */
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%; /* iOS dreht Schriften nicht hoch im Landscape */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none; /* kein Bounce am Seitenende */
+}
+img { -webkit-user-drag: none; user-drag: none; pointer-events: auto; }
+body {
+  padding: max(env(safe-area-inset-top), 16px) max(env(safe-area-inset-right), 16px) max(env(safe-area-inset-bottom), 16px) max(env(safe-area-inset-left), 16px);
+}
+.container { max-width: 760px; margin: 0 auto; }
+header {
+  position: sticky; top: 0;
+  background: var(--header-bg);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  z-index: 50;
+  padding: 12px 16px 16px;
+  margin: 0 -16px 8px;
+  border-bottom: 1px solid var(--bg3);
+}
+h1.app-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+.search-row { display: flex; gap: 8px; align-items: center; }
+.search-input {
+  flex: 1; background: var(--bg2); border: none; color: var(--l1);
+  padding: 12px 14px; border-radius: var(--r-btn);
+  font-size: 16px; /* iOS: <16px löst Auto-Zoom beim Tap aus */
+  font-family: inherit; outline: none;
+  min-height: 44px; /* Apple HIG Touch-Target */
+}
+.search-input::placeholder { color: var(--l2); }
+.icon-btn {
+  width: 40px; height: 40px; background: var(--bg2); border: none;
+  border-radius: var(--r-btn); color: var(--l1); font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s ease; position: relative;
+}
+.icon-btn .badge {
+  position: absolute; top: 4px; right: 4px;
+  background: var(--blue); color: var(--l1);
+  font-size: 10px; font-weight: 700;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  padding: 0 4px; display: flex; align-items: center; justify-content: center;
+}
+@media (hover: hover) { .icon-btn:hover { background: var(--bg3); } }
+.tabs {
+  display: flex; gap: 4px; margin: 16px 0;
+  background: var(--bg2); padding: 4px; border-radius: var(--r-btn);
+}
+.tab {
+  flex: 1; background: transparent; border: none; color: var(--l2);
+  padding: 10px 12px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease; font-family: inherit;
+  min-height: 40px;
+}
+.tab.active { background: var(--bg3); color: var(--l1); }
+/* Vorschau-Selektor: Segmented Control wie die Haupt-Tabs, klar unterschiedlich von den Genre-Pills darunter */
+.range-row {
+  margin: 0 0 16px;
+}
+.range-label {
+  display: block; text-align: center;
+  font-size: 11px; font-weight: 600; color: var(--l2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.range-switcher {
+  display: flex; gap: 4px;
+  background: var(--bg2); padding: 4px;
+  border-radius: var(--r-btn);
+}
+.range-pill {
+  flex: 1; background: transparent; border: none;
+  color: var(--l2);
+  padding: 8px 4px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: inherit; min-height: 36px;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.range-pill.active { background: var(--bg3); color: var(--l1); }
+.filter-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 0 0 16px;
+}
+.pill {
+  background: var(--bg2); border: 1px solid var(--bg3); color: var(--l1);
+  padding: 6px 12px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease; font-family: inherit;
+}
+.pill.active { background: var(--blue); border-color: var(--blue); color: var(--l1); }
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 32px;
+}
+.movie-card {
+  background: var(--bg2); border-radius: var(--r-card); overflow: hidden;
+  cursor: pointer; position: relative; transition: background 0.2s ease;
+}
+@media (hover: hover) { .movie-card:hover { background: var(--bg3); } }
+.poster { width: 100%; aspect-ratio: 2 / 3; background: var(--bg3); display: block; object-fit: cover; }
+.poster.placeholder { display: flex; align-items: center; justify-content: center; color: var(--l3); font-size: 32px; }
+.card-body { padding: 12px; }
+.card-title {
+  font-size: 14px; font-weight: 600; color: var(--l1); margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-date { font-size: 12px; font-weight: 500; color: var(--l2); }
+.region-hint { font-size: 10px; color: var(--l3); margin-left: 4px; }
+.watch-star {
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px;
+  background: var(--star-bg);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: none; border-radius: 50%; color: var(--l2); cursor: pointer;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.watch-star.active { color: var(--orange); }
+.countdown-banner {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(10, 132, 255, 0.92);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: var(--l1);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 4px 10px; border-radius: var(--r-pill);
+}
+.countdown-banner.live { background: rgba(48, 209, 88, 0.92); }
+.countdown-banner.today { background: rgba(255, 159, 10, 0.92); }
+.empty { text-align: center; padding: 48px 16px; color: var(--l2); font-size: 14px; }
+.loading { text-align: center; padding: 48px 16px; color: var(--l2); font-size: 14px; }
+.spinner {
+  display: inline-block; width: 28px; height: 28px;
+  border: 2px solid var(--bg3); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.sheet-backdrop {
+  position: fixed; inset: 0; background: var(--backdrop); z-index: 100;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg2);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  max-height: 92vh; max-height: 92dvh;
+  overflow-y: auto; z-index: 101;
+  -webkit-overflow-scrolling: touch; /* iOS Momentum-Scroll */
+  transform: translateY(100%); transition: transform 0.25s ease;
+  padding: 16px 20px max(env(safe-area-inset-bottom), 24px);
+  overscroll-behavior: contain;
+}
+.sheet.open { transform: translateY(0); }
+.sheet-handle { width: 36px; height: 5px; background: var(--bg3); border-radius: 2.5px; margin: 0 auto 16px; }
+.sheet-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; background: var(--bg3);
+  border: none; border-radius: 50%; color: var(--l1); font-size: 14px; cursor: pointer;
+}
+.sheet-hero { display: flex; gap: 16px; margin-bottom: 20px; }
+.sheet-poster {
+  width: 110px; aspect-ratio: 2 / 3; border-radius: 12px;
+  object-fit: cover; background: var(--bg3); flex-shrink: 0;
+}
+.sheet-info { flex: 1; min-width: 0; }
+.sheet-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; line-height: 1.2; }
+.sheet-meta { font-size: 13px; color: var(--l2); margin-bottom: 10px; }
+.sheet-rating {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--bg3); padding: 4px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 600; color: var(--green);
+}
+.genre-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.genre-tag {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  border: 1px solid var(--bg3); color: var(--l1);
+}
+.sheet-overview { font-size: 14px; line-height: 1.5; color: var(--l1); margin: 16px 0; }
+.sheet-actions { display: flex; gap: 8px; margin: 16px 0; }
+.btn {
+  flex: 1; background: var(--bg3); border: none; color: var(--l1);
+  padding: 12px 16px; border-radius: var(--r-btn);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  text-align: center; text-decoration: none; font-family: inherit;
+  transition: background 0.2s ease;
+}
+.btn.primary { background: var(--blue); }
+.btn.warning { background: var(--orange); }
+@media (hover: hover) { .btn:hover { filter: brightness(1.1); } }
+.trailer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 16px 0 8px;
+}
+.trailer-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--l2);
+}
+.trailer-yt-link {
+  font-size: 13px; font-weight: 600; color: var(--blue);
+  text-decoration: none; padding: 6px 10px;
+  border-radius: var(--r-pill); background: var(--bg3);
+  transition: background 0.2s ease;
+}
+@media (hover: hover) { .trailer-yt-link:hover { background: var(--bg2); } }
+.trailer-wrap {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--bg3); border-radius: 12px; overflow: hidden; margin: 0 0 8px;
+}
+.trailer-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.trailer-hint {
+  font-size: 11px; color: var(--l2); line-height: 1.4;
+  margin: 0 0 16px; padding: 8px 12px;
+  background: var(--bg3); border-radius: 8px;
+}
+.modal-backdrop {
+  position: fixed; inset: 0; background: var(--bg); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-card {
+  background: var(--bg2); border-radius: var(--r-card);
+  padding: 24px; max-width: 420px; width: 100%;
+}
+.modal-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.modal-text { font-size: 14px; color: var(--l2); margin-bottom: 16px; line-height: 1.5; }
+.modal-text a { color: var(--blue); text-decoration: none; }
+.modal-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--bg3); color: var(--l1);
+  padding: 12px 14px; border-radius: var(--r-btn);
+  font-size: 16px; /* iOS: 16px verhindert Auto-Zoom beim Tap */
+  font-family: ui-monospace, monospace;
+  outline: none; margin-bottom: 12px;
+  min-height: 44px;
+}
+.modal-input:focus { border-color: var(--blue); }
+.error-msg { font-size: 12px; color: var(--red); margin-bottom: 12px; min-height: 16px; }
+.banner {
+  background: var(--bg2); border: 1px solid var(--red);
+  border-radius: var(--r-card); padding: 16px; margin: 16px 0;
+  font-size: 14px; color: var(--l1);
+}
+.banner.warning { border-color: var(--orange); }
+.settings-link {
+  display: block; text-align: center; color: var(--l2);
+  font-size: 12px; padding: 16px; cursor: pointer; margin-top: 16px;
+}
+.theme-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 32px; padding: 12px 16px;
+  background: var(--bg2); border-radius: var(--r-card);
+}
+.theme-label {
+  font-size: 13px; font-weight: 600; color: var(--l1);
+}
+.theme-switcher {
+  display: inline-flex; background: var(--bg3); padding: 3px; border-radius: var(--r-btn);
+}
+.theme-pill {
+  background: transparent; border: none; color: var(--l2);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 6px 14px; border-radius: 8px;
+  font-family: inherit; min-height: 32px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.theme-pill.active { background: var(--bg2); color: var(--l1); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="setup-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <h2 class="modal-title">TMDB-API-Key</h2>
+    <p class="modal-text">
+      Damit Filme angezeigt werden können, brauche ich deinen persönlichen API-Key von
+      <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a>.
+      Der Key wird nur in diesem Browser gespeichert (localStorage) und nirgends sonst.
+    </p>
+    <input id="api-key-input" class="modal-input" type="text" placeholder="z.B. 1769f440446aef45c48b7f664b750c7b" autocomplete="off" spellcheck="false">
+    <div id="setup-error" class="error-msg"></div>
+    <button id="save-key-btn" class="btn primary">Speichern und starten</button>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <h1 class="app-title">MovieView</h1>
+    <div class="search-row">
+      <input id="search-input" class="search-input" type="search" placeholder="Suchen…" autocomplete="off">
+      <button id="watchlist-btn" class="icon-btn" aria-label="Watchlist">
+        ★
+        <span id="watchlist-count" class="badge hidden">0</span>
+      </button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-view="now">Jetzt im Kino</button>
+      <button class="tab" data-view="upcoming">Demnächst</button>
+      <button class="tab" data-view="watchlist">Watchlist</button>
+    </div>
+  </header>
+
+  <div id="range-row" class="range-row hidden">
+    <span class="range-label">Vorschau</span>
+    <div class="range-switcher" role="group" aria-label="Vorschau-Zeitraum">
+      <button class="range-pill" data-days="7">7 T</button>
+      <button class="range-pill" data-days="30">30 T</button>
+      <button class="range-pill" data-days="90">3 M</button>
+      <button class="range-pill active" data-days="180">6 M</button>
+      <button class="range-pill" data-days="365">12 M</button>
+    </div>
+  </div>
+  <div id="filter-row" class="filter-row"></div>
+
+  <main id="main">
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <div>Filme werden geladen…</div>
+    </div>
+    <div id="error-banner" class="banner hidden"></div>
+    <div id="movie-grid" class="movie-grid"></div>
+    <div id="empty-state" class="empty hidden">Keine Filme gefunden.</div>
+  </main>
+
+  <div class="theme-row">
+    <span class="theme-label">Erscheinungsbild</span>
+    <div class="theme-switcher" role="group" aria-label="Theme umschalten">
+      <button class="theme-pill" data-theme="dark">🌙 Dunkel</button>
+      <button class="theme-pill" data-theme="light">☀️ Hell</button>
+    </div>
+  </div>
+  <div class="settings-link" id="settings-link">Einstellungen · API-Key ändern · Cache leeren</div>
+</div>
+
+<div id="sheet-backdrop" class="sheet-backdrop"></div>
+<div id="sheet" class="sheet">
+  <div class="sheet-handle"></div>
+  <button id="sheet-close" class="sheet-close" aria-label="Schliessen">✕</button>
+  <div id="sheet-content"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEYS = {
+    apiKey:     'kinofilme_v1_tmdb_key',
+    watchlist:  'kinofilme_v1_watchlist',
+    cache:      'kinofilme_v5_cache',
+    theme:      'kinofilme_v1_theme'
+  };
+  const TMDB_BASE = 'https://api.themoviedb.org/3';
+  const IMG_BASE  = 'https://image.tmdb.org/t/p/w500';
+  const LANG      = 'de-DE';
+  const REGIONS   = ['CH', 'DE', 'AT'];
+  const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+  const UPCOMING_MONTHS = 12; // max. Vorschauzeitraum, clientseitig wird auf state.upcomingDays gefiltert
+  const MAX_PAGES = 4;
+  const DEFAULT_UPCOMING_DAYS = 180; // 6 Monate
+  const ASSUMED_RUN_DAYS = 42; // ~6 Wochen geschätzte Spielzeit im Kino
+
+  const state = {
+    apiKey: null,
+    view: 'now',
+    genres: {},
+    selectedGenre: null,
+    searchQuery: '',
+    upcomingDays: DEFAULT_UPCOMING_DAYS,
+    movies: { now: [], upcoming: [] },
+    watchlist: []
+  };
+
+  // ---------- STORAGE ----------
+  const loadKey    = () => localStorage.getItem(STORAGE_KEYS.apiKey);
+  const saveKey    = k => localStorage.setItem(STORAGE_KEYS.apiKey, k);
+  const removeKey  = () => localStorage.removeItem(STORAGE_KEYS.apiKey);
+
+  const loadWatchlist = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.watchlist)) || []; } catch (e) { return []; } };
+  const saveWatchlist = l => localStorage.setItem(STORAGE_KEYS.watchlist, JSON.stringify(l));
+
+  const loadCache  = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.cache)) || {}; } catch (e) { return {}; } };
+  const saveCache  = c => { try { localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify(c)); } catch (e) {} };
+  const clearCache = () => localStorage.removeItem(STORAGE_KEYS.cache);
+
+  // ---------- THEME ----------
+  const loadTheme = () => localStorage.getItem(STORAGE_KEYS.theme) || 'dark';
+  const saveTheme = t  => localStorage.setItem(STORAGE_KEYS.theme, t);
+
+  function applyTheme(theme) {
+    document.body.classList.toggle('light', theme === 'light');
+    // theme-color Meta-Tag updaten, damit iOS-Statusleiste die Farbe übernimmt
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === 'light' ? '#F2F2F7' : '#000000';
+    document.querySelectorAll('.theme-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.theme === theme);
+    });
+  }
+
+  function cacheGet(key) {
+    const all = loadCache(); const entry = all[key];
+    if (!entry || Date.now() - entry.ts > CACHE_TTL_MS) return null;
+    return entry.data;
+  }
+  function cacheSet(key, data) {
+    const all = loadCache(); all[key] = { ts: Date.now(), data: data }; saveCache(all);
+  }
+
+  // ---------- TMDB ----------
+  async function tmdbFetch(path, params = {}) {
+    const url = new URL(TMDB_BASE + path);
+    url.searchParams.set('api_key', state.apiKey);
+    url.searchParams.set('language', LANG);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+    });
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error('TMDB ' + res.status + ': ' + body.slice(0, 120));
+    }
+    return res.json();
+  }
+
+  async function fetchGenres() {
+    const c = cacheGet('genres'); if (c) return c;
+    const data = await tmdbFetch('/genre/movie/list');
+    const map = {}; (data.genres || []).forEach(g => map[g.id] = g.name);
+    cacheSet('genres', map); return map;
+  }
+
+  async function fetchPages(path, params, pages = MAX_PAGES) {
+    const all = [];
+    for (let p = 1; p <= pages; p++) {
+      const data = await tmdbFetch(path, { ...params, page: p });
+      all.push(...(data.results || []));
+      if (p >= (data.total_pages || 1)) break;
+    }
+    return all;
+  }
+
+  const todayISO     = (off = 0) => { const d = new Date(); d.setDate(d.getDate() + off); return d.toISOString().slice(0, 10); };
+  const monthsFromNow = m => { const d = new Date(); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0, 10); };
+
+  // Merge mehrerer Regionen, behält das Datum der ersten Region die einen Eintrag hat.
+  function mergeByRegionPriority(perRegion) {
+    const map = new Map();
+    perRegion.forEach(({ region, movies }) => {
+      movies.forEach(m => {
+        if (!m.release_date) return;
+        if (!map.has(m.id)) map.set(m.id, { ...m, _region: region });
+      });
+    });
+    return Array.from(map.values());
+  }
+
+  async function fetchNowPlaying() {
+    const c = cacheGet('now'); if (c) return c;
+    const perRegion = await Promise.all(
+      REGIONS.map(async r => ({
+        region: r,
+        movies: await fetchPages('/movie/now_playing', { region: r }, 2)
+      }))
+    );
+    const list = mergeByRegionPriority(perRegion)
+      .sort((a, b) => new Date(b.release_date || 0) - new Date(a.release_date || 0));
+    cacheSet('now', list); return list;
+  }
+
+  async function fetchUpcoming() {
+    const c = cacheGet('upcoming'); if (c) return c;
+    // sort_by: popularity.desc, weil TMDB sonst tausende Indie-Filme nach Datum reinwirft
+    // und die grossen Releases (Spider-Man, Avatar etc.) erst nach Page 40+ kommen.
+    // Im Frontend wird nach dem Merge nochmal nach Datum sortiert.
+    const params = {
+      with_release_type: '2|3',
+      'primary_release_date.gte': todayISO(1),
+      'primary_release_date.lte': monthsFromNow(UPCOMING_MONTHS),
+      sort_by: 'popularity.desc',
+      include_adult: 'false'
+    };
+    const perRegion = await Promise.all(
+      REGIONS.map(async r => ({
+        region: r,
+        movies: await fetchPages('/discover/movie', { ...params, region: r }, MAX_PAGES)
+      }))
+    );
+    const list = mergeByRegionPriority(perRegion)
+      .filter(m => m.release_date)
+      .sort((a, b) => new Date(a.release_date) - new Date(b.release_date));
+    cacheSet('upcoming', list); return list;
+  }
+
+  async function fetchMovieDetails(id) {
+    const ck = 'movie_' + id;
+    const c = cacheGet(ck); if (c) return c;
+    const [details, videos] = await Promise.all([
+      tmdbFetch('/movie/' + id),
+      tmdbFetch('/movie/' + id + '/videos')
+    ]);
+    const data = { details, videos: videos.results || [] };
+    cacheSet(ck, data); return data;
+  }
+
+  // ---------- HELPERS ----------
+  function formatDate(iso) {
+    if (!iso) return '–';
+    const d = new Date(iso); if (isNaN(d)) return iso;
+    return d.toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+  function escapeHTML(s) {
+    if (!s) return '';
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  const isInWatchlist = id => state.watchlist.some(w => w.id === id);
+
+  // Berechnet Tage zwischen heute und Release. Negativ = läuft schon.
+  function daysUntilRelease(iso) {
+    if (!iso) return null;
+    const release = new Date(iso); release.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    return Math.round((release - today) / 86400000);
+  }
+
+  function countdownLabel(iso) {
+    const days = daysUntilRelease(iso);
+    if (days === null) return null;
+    if (days > 1)   return { text: 'Noch ' + days + ' Tage', cls: '' };
+    if (days === 1) return { text: 'Morgen Start',           cls: 'today' };
+    if (days === 0) return { text: 'Heute im Kino',          cls: 'today' };
+    // Film läuft bereits: Datumsspanne anzeigen (Start + ca. 6 Wochen)
+    const start = new Date(iso);
+    const end = new Date(start); end.setDate(end.getDate() + ASSUMED_RUN_DAYS);
+    const fmt = d => d.toLocaleDateString('de-CH', { day: 'numeric', month: 'numeric' });
+    return { text: fmt(start) + ' – ca. ' + fmt(end), cls: '' };
+  }
+
+  // Generiert URL für cineman.ch-Filmsuche
+  function cinemanSearchUrl(title) {
+    return 'https://www.cineman.ch/search/?query=' + encodeURIComponent(title || '');
+  }
+
+  function toggleWatchlist(movie) {
+    const idx = state.watchlist.findIndex(w => w.id === movie.id);
+    if (idx >= 0) state.watchlist.splice(idx, 1);
+    else state.watchlist.push({
+      id: movie.id, title: movie.title, release_date: movie.release_date,
+      poster_path: movie.poster_path, genre_ids: movie.genre_ids || [], _region: movie._region
+    });
+    saveWatchlist(state.watchlist);
+    updateWatchlistBadge();
+    render();
+  }
+
+  function updateWatchlistBadge() {
+    const b = document.getElementById('watchlist-count');
+    if (state.watchlist.length > 0) { b.textContent = state.watchlist.length; b.classList.remove('hidden'); }
+    else b.classList.add('hidden');
+  }
+
+  // ---------- RENDER ----------
+  // Basis-Liste vor Genre/Search-Filter, aber NACH Zeitraum-Filter (für upcoming).
+  function getFilteredBase() {
+    let list = state.view === 'now' ? state.movies.now
+             : state.view === 'upcoming' ? state.movies.upcoming
+             : state.watchlist;
+    if (state.view === 'upcoming') {
+      list = list.filter(m => {
+        const d = daysUntilRelease(m.release_date);
+        return d !== null && d >= 0 && d <= state.upcomingDays;
+      });
+    }
+    return list;
+  }
+
+  function getCurrentList() {
+    let list = getFilteredBase();
+    if (state.selectedGenre) list = list.filter(m => (m.genre_ids || []).includes(state.selectedGenre));
+    if (state.searchQuery) {
+      const q = state.searchQuery.toLowerCase();
+      list = list.filter(m =>
+        (m.title || '').toLowerCase().includes(q) ||
+        (m.original_title || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  function renderFilters() {
+    const row = document.getElementById('filter-row');
+    // Genre-Auswahl basiert auf der (zeitraum-)gefilterten Basis,
+    // damit nur Genres erscheinen, die in der aktuellen Auswahl vorkommen.
+    const source = getFilteredBase();
+    const active = new Set();
+    source.forEach(m => (m.genre_ids || []).forEach(id => active.add(id)));
+    const allPill = `<button class="pill ${state.selectedGenre === null ? 'active' : ''}" data-genre="">Alle</button>`;
+    const pills = Array.from(active)
+      .map(id => state.genres[id] ? { id, name: state.genres[id] } : null)
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+      .map(g => `<button class="pill ${state.selectedGenre === g.id ? 'active' : ''}" data-genre="${g.id}">${escapeHTML(g.name)}</button>`)
+      .join('');
+    row.innerHTML = allPill + pills;
+    row.querySelectorAll('.pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.genre;
+        state.selectedGenre = v ? Number(v) : null;
+        render();
+      });
+    });
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('movie-grid');
+    const empty = document.getElementById('empty-state');
+    const list = getCurrentList();
+    if (list.length === 0) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      empty.textContent = state.view === 'watchlist'
+        ? 'Deine Watchlist ist leer. Tippe auf den Stern bei einem Film, um ihn zu sammeln.'
+        : (state.searchQuery || state.selectedGenre) ? 'Keine Treffer mit diesen Filtern.' : 'Keine Filme gefunden.';
+      return;
+    }
+    empty.classList.add('hidden');
+    grid.innerHTML = list.map(m => {
+      const poster = m.poster_path
+        ? `<img class="poster" src="${IMG_BASE}${m.poster_path}" alt="${escapeHTML(m.title)}" loading="lazy">`
+        : `<div class="poster placeholder">🎬</div>`;
+      const date = formatDate(m.release_date);
+      const regionHint = m._region && m._region !== 'CH' ? `<span class="region-hint">${m._region}</span>` : '';
+      const star = isInWatchlist(m.id) ? '★' : '☆';
+      const starClass = isInWatchlist(m.id) ? 'active' : '';
+      // Countdown-Banner überall sichtbar: in "Jetzt im Kino" zeigt er die Datumsspanne,
+      // in "Demnächst" und "Watchlist" den Countdown bis Start.
+      let countdownHTML = '';
+      const cd = countdownLabel(m.release_date);
+      if (cd) countdownHTML = `<div class="countdown-banner ${cd.cls}">${cd.text}</div>`;
+      return `
+        <article class="movie-card" data-id="${m.id}">
+          ${poster}
+          ${countdownHTML}
+          <button class="watch-star ${starClass}" data-id="${m.id}" aria-label="Watchlist">${star}</button>
+          <div class="card-body">
+            <div class="card-title">${escapeHTML(m.title)}</div>
+            <div class="card-date">${date}${regionHint}</div>
+          </div>
+        </article>`;
+    }).join('');
+    grid.querySelectorAll('.movie-card').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('.watch-star')) return;
+        openDetail(Number(card.dataset.id));
+      });
+    });
+    grid.querySelectorAll('.watch-star').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = Number(btn.dataset.id);
+        const movie = list.find(m => m.id === id);
+        if (movie) toggleWatchlist(movie);
+      });
+    });
+  }
+
+  function render() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === state.view));
+    // Zeitraum-Selektor nur bei "Demnächst" zeigen
+    document.getElementById('range-row').classList.toggle('hidden', state.view !== 'upcoming');
+    renderFilters();
+    renderGrid();
+  }
+
+  // ---------- DETAIL SHEET ----------
+  async function openDetail(id) {
+    const sheet = document.getElementById('sheet');
+    const backdrop = document.getElementById('sheet-backdrop');
+    const content = document.getElementById('sheet-content');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><div>Details werden geladen…</div></div>';
+    sheet.classList.add('open');
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    try {
+      const { details, videos } = await fetchMovieDetails(id);
+      // Trailer-Auswahl: zuerst offizieller Trailer, dann irgendein Trailer, dann Teaser, dann irgendein YT-Video.
+      const yt = videos.filter(v => v.site === 'YouTube');
+      const trailer = yt.find(v => v.official && v.type === 'Trailer')
+                   || yt.find(v => v.type === 'Trailer')
+                   || yt.find(v => v.type === 'Teaser')
+                   || yt[0];
+      const poster = details.poster_path
+        ? `<img class="sheet-poster" src="${IMG_BASE}${details.poster_path}" alt="">`
+        : `<div class="sheet-poster"></div>`;
+      const genres = (details.genres || []).map(g => `<span class="genre-tag">${escapeHTML(g.name)}</span>`).join('');
+      const rating = details.vote_average ? `<span class="sheet-rating">★ ${details.vote_average.toFixed(1)}</span>` : '';
+      const runtime = details.runtime ? `${details.runtime} Min.` : '';
+      const inList = [...state.movies.now, ...state.movies.upcoming, ...state.watchlist].find(m => m.id === details.id);
+      const listDate = inList?.release_date;
+      const sourceRegion = inList?._region;
+      const dateForMeta = listDate || details.release_date;
+      const regionLabel = sourceRegion && sourceRegion !== 'CH'
+        ? ` <span style="color: var(--l2); font-size: 11px;">(Start ${sourceRegion})</span>`
+        : '';
+      const meta = [runtime, formatDate(dateForMeta) + regionLabel].filter(Boolean).join(' · ');
+      const tmdbUrl = `https://www.themoviedb.org/movie/${details.id}`;
+      const inWatch = isInWatchlist(details.id);
+      content.innerHTML = `
+        <div class="sheet-hero">
+          ${poster}
+          <div class="sheet-info">
+            <h2 class="sheet-title">${escapeHTML(details.title)}</h2>
+            <div class="sheet-meta">${meta}</div>
+            ${rating}
+          </div>
+        </div>
+        ${genres ? `<div class="genre-list">${genres}</div>` : ''}
+        ${details.tagline ? `<p class="sheet-overview" style="font-style: italic; color: var(--l2);">«${escapeHTML(details.tagline)}»</p>` : ''}
+        <p class="sheet-overview">${escapeHTML(details.overview || 'Keine Beschreibung verfügbar.')}</p>
+        ${trailer ? `
+          <div class="trailer-header">
+            <span class="trailer-label">Trailer</span>
+            <a class="trailer-yt-link" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">↗ Auf YouTube ansehen</a>
+          </div>
+          <div class="trailer-wrap">
+            <iframe src="https://www.youtube-nocookie.com/embed/${trailer.key}?rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </div>
+          <p class="trailer-hint">Wenn der Player nicht lädt (z.B. Fehler 153), öffne den Trailer über den Link oben → YouTube. Das passiert nur beim lokalen Test über file://, online (GitHub Pages) funktioniert die Einbettung normal.</p>
+        ` : '<p class="sheet-overview" style="color: var(--l2);">Kein Trailer auf TMDB verlinkt.</p>'}
+        <div class="sheet-actions">
+          <button class="btn ${inWatch ? 'warning' : 'primary'}" id="sheet-watch-btn">${inWatch ? '★ In Watchlist' : '☆ Zur Watchlist'}</button>
+          ${(daysUntilRelease(dateForMeta) ?? 1) <= 0
+            ? `<a class="btn primary" href="${cinemanSearchUrl(details.title)}" target="_blank" rel="noopener">🎟 Auf Cineman</a>`
+            : ''}
+          <a class="btn" href="${tmdbUrl}" target="_blank" rel="noopener">TMDB</a>
+        </div>`;
+      const watchBtn = document.getElementById('sheet-watch-btn');
+      if (watchBtn) {
+        watchBtn.addEventListener('click', () => {
+          toggleWatchlist({
+            id: details.id, title: details.title, release_date: dateForMeta,
+            poster_path: details.poster_path,
+            genre_ids: (details.genres || []).map(g => g.id),
+            _region: sourceRegion
+          });
+          const nowIn = isInWatchlist(details.id);
+          watchBtn.textContent = nowIn ? '★ In Watchlist' : '☆ Zur Watchlist';
+          watchBtn.classList.toggle('warning', nowIn);
+          watchBtn.classList.toggle('primary', !nowIn);
+        });
+      }
+    } catch (err) {
+      content.innerHTML = `<div class="banner">Details konnten nicht geladen werden: ${escapeHTML(err.message)}</div>`;
+    }
+  }
+
+  function closeSheet() {
+    document.getElementById('sheet').classList.remove('open');
+    document.getElementById('sheet-backdrop').classList.remove('open');
+    document.body.style.overflow = '';
+    const iframe = document.querySelector('#sheet-content iframe');
+    if (iframe) iframe.src = iframe.src;
+  }
+
+  function showError(msg, isWarning = false) {
+    const b = document.getElementById('error-banner');
+    b.textContent = msg;
+    b.classList.remove('hidden');
+    b.classList.toggle('warning', isWarning);
+  }
+  function hideError() { document.getElementById('error-banner').classList.add('hidden'); }
+
+  function showSetup(errorText) {
+    document.getElementById('setup-modal').classList.remove('hidden');
+    document.getElementById('setup-error').textContent = errorText || '';
+    document.getElementById('api-key-input').value = state.apiKey || '';
+    document.getElementById('api-key-input').focus();
+  }
+  function hideSetup() { document.getElementById('setup-modal').classList.add('hidden'); }
+
+  async function validateAndSaveKey(key) {
+    state.apiKey = key.trim();
+    try {
+      const data = await tmdbFetch('/genre/movie/list');
+      if (!data.genres) throw new Error('Antwort ohne Daten');
+      saveKey(state.apiKey); return true;
+    } catch (err) {
+      state.apiKey = null; return err.message;
+    }
+  }
+
+  async function loadAll() {
+    document.getElementById('loading').classList.remove('hidden');
+    hideError();
+    try {
+      state.genres = await fetchGenres();
+      const [now, upcoming] = await Promise.all([fetchNowPlaying(), fetchUpcoming()]);
+      state.movies.now = now;
+      state.movies.upcoming = upcoming;
+    } catch (err) {
+      showError('Konnte Filme nicht laden: ' + err.message + ' – prüfe API-Key oder Internet.');
+    } finally {
+      document.getElementById('loading').classList.add('hidden');
+      render();
+    }
+  }
+
+  function wireEvents() {
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => {
+        state.view = t.dataset.view;
+        state.selectedGenre = null;
+        render();
+      });
+    });
+    document.getElementById('watchlist-btn').addEventListener('click', () => {
+      state.view = 'watchlist'; state.selectedGenre = null; render();
+    });
+    document.getElementById('search-input').addEventListener('input', e => {
+      state.searchQuery = e.target.value.trim(); render();
+    });
+    document.getElementById('sheet-close').addEventListener('click', closeSheet);
+    document.getElementById('sheet-backdrop').addEventListener('click', closeSheet);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+    document.getElementById('save-key-btn').addEventListener('click', async () => {
+      const val = document.getElementById('api-key-input').value;
+      if (!val || val.trim().length < 20) {
+        document.getElementById('setup-error').textContent = 'Der Key sieht zu kurz aus. Sicher, dass das der v3-API-Key ist?';
+        return;
+      }
+      document.getElementById('setup-error').textContent = 'Prüfe Key…';
+      const ok = await validateAndSaveKey(val);
+      if (ok === true) {
+        hideSetup();
+        clearCache();
+        loadAll();
+      } else {
+        document.getElementById('setup-error').textContent = 'Key wurde von TMDB abgelehnt: ' + ok;
+      }
+    });
+
+    document.getElementById('settings-link').addEventListener('click', () => {
+      const ok = confirm('API-Key ändern oder Cache leeren?\n\nOK = beides zurücksetzen (du wirst nach dem Key gefragt).\nAbbrechen = nichts tun.');
+      if (ok) {
+        removeKey(); clearCache();
+        state.apiKey = null;
+        state.movies.now = []; state.movies.upcoming = [];
+        render(); showSetup();
+      }
+    });
+
+    // Theme-Toggle
+    document.querySelectorAll('.theme-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.theme;
+        saveTheme(t);
+        applyTheme(t);
+      });
+    });
+
+    // Vorschau-Zeitraum
+    document.querySelectorAll('.range-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.upcomingDays = Number(btn.dataset.days);
+        document.querySelectorAll('.range-pill').forEach(p =>
+          p.classList.toggle('active', p === btn));
+        state.selectedGenre = null; // Genre-Filter zurücksetzen, weil Genres sich ändern
+        render();
+      });
+    });
+  }
+
+  function boot() {
+    state.apiKey = loadKey();
+    state.watchlist = loadWatchlist();
+    updateWatchlistBadge();
+    wireEvents();
+    applyTheme(loadTheme()); // Theme aus localStorage übernehmen (default: dark)
+    render();
+    if (!state.apiKey) showSetup();
+    else loadAll();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
