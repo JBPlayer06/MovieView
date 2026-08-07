@@ -1,0 +1,474 @@
+# Projekt: Kinofilme-CH
+
+> Persönliche Übersichts-Website für Kinostarts in der Schweiz – läuft als Single-File-PWA, gehostet auf GitHub Pages.
+
+**Start:** 2026-05-20
+**Status:** in Entwicklung – lokale Bauphase
+
+---
+
+## Ziel
+
+Eine Website, auf der JB sieht, welche Filme aktuell im Schweizer Kino laufen und welche in den nächsten 6 Monaten starten. Lokal auf Windows 11 erreichbar (per Datei) und später öffentlich über GitHub Pages.
+
+## Entscheidungen (festgelegt am 2026-05-20)
+
+| Thema | Entscheidung | Begründung |
+|---|---|---|
+| Datenquelle | TMDB-API (v3) | Gratis, automatisch aktuell, CH-Region-Filter möglich |
+| Region | Schweiz (`region=CH`) | Primärmarkt für JB |
+| Zeitraum | Aktuell im Kino + nächste 6 Monate | Zwei Sektionen nebeneinander |
+| Funktionen | Trailer (YouTube), Suche, Filter, Watchlist | Watchlist via localStorage |
+| Hosting | GitHub Pages (öffentliches Repo) | Gratis, von überall erreichbar |
+| API-Key-Speicherung | localStorage (Browser-seitig) | Repo bleibt sauber, Key nicht im Code |
+| Designsystem | Apple Dark Mode (DeepMind 04_design_system.md) | Konsequente Linie mit allen JB-Projekten |
+
+## Technische Eckpunkte
+
+- **Stack:** Single-File `index.html` mit Vanilla JS, kein Framework
+- **TMDB-Endpunkte:**
+  - `/movie/now_playing?region=CH&language=de-DE` für aktuelle Filme
+  - `/discover/movie?primary_release_date.gte=...&primary_release_date.lte=...&region=CH` für die Vorschau
+  - `/movie/{id}` für Details, `/movie/{id}/videos` für Trailer
+- **Bilder:** `https://image.tmdb.org/t/p/w500/{poster_path}` (Kugel: w342)
+- **Cache:** localStorage mit 6-Stunden-TTL, Key `kinofilme_v5_cache`
+- **Watchlist-Key:** `kinofilme_v1_watchlist` · **API-Key:** `kinofilme_v1_tmdb_key`
+- **Ansichts-Modus:** `kinofilme_v1_viewmode` (`grid` oder `sphere`)
+- **Kino-Verwaltung (neu 07-29):** `kinofilme_v1_cinemas` (Liste), `kinofilme_v1_cinemasort` (`custom`/`distance`), `kinofilme_v1_geoloc` (`on`/`off`), `kinofilme_v1_lastpos` (letzter Standort, 10-Min-TTL), `kinofilme_v1_mapsapp` (`apple`/`google`)
+- **Sprachfilter:** in It. 4 gebaut, in It. 5 auf JB-Entscheid wieder ENTFERNT (TMDB kennt nur die Originalsprache, nicht ob eine deutsche Fassung existiert – ein Filter, der fast immer «ja» sagt, bringt nichts). Alter Key `kinofilme_v1_lang` bleibt harmlos in localStorage liegen.
+- **Alle bestehenden Keys unverändert** – Watchlist und API-Key überleben jedes Update.
+
+## Kugel-Ansicht (phantom.land-Effekt, 2026-07-02, Politur 07-29)
+
+- Umschalter (Kugel-/Raster-Symbol) sitzt seit Iteration 2 in der Tab-Bar; Wahl bleibt in localStorage.
+- Mechanik: fester Kachel-Pool, virtueller Offset, Welt-Position modulo Rastergrösse = endloses Grid. Wölbung über `translateZ` (quadratisch) + Kippen zur Mitte, reines CSS-3D.
+- Tap auf Kachel öffnet das Detail-Sheet (Distanz <8 px, Zeit <400 ms unterscheidet Tap von Drag; Kachel wird beim `pointerdown` gemerkt wegen `setPointerCapture`).
+- Politur 07-29: Tiefen-Schleier pro Kachel, fixe Vignette als eigene Ebene, 1px-Haarlinie, weiches Einblenden der Poster, Ausrollen 0.95, Drift 0.10/0.04, Kipp-Winkel 14°, teilerfremder Reihen-Sprung gegen Spalten-Wiederholung.
+- **Bedienfelder seit Iteration 2 OBEN** (JB 07-29): Suche, Vorschau-Zeitraum und Genre-Pills schweben als Glas-Felder im Tab-Bar-Stil am oberen Rand über der Kugel; unten bleibt nur die Tab-Bar. Einklappen über Chevron rechts in der Suchzeile (Felder gleiten nach oben weg), Aufklapp-Knopf schwebt oben rechts. Leer-/Lade-Meldung als zentrierte Glas-Karte. Der schwarze Bedien-Streifen unten aus Iteration 1 ist damit ÜBERHOLT.
+- Hinweis-Pille («Ziehen · Tippen für Details») sitzt unten über der Tab-Bar, blendet nach der ersten Interaktion aus.
+
+## Apple-Politur & Forma-Bausteine (2026-07-29, Iteration 1)
+
+JBs Auftrag: App sauberer, 3D-Ansicht schöner, Ausklappmenü schwarz, Forma-Stil (X-Knöpfe, Schimmer-Rand). 4 Bewertungs-Durchläufe bis 10/10.
+
+- **Schimmer-Kanten-System** (Forma Build 8): 1px-Lichtlinie, unten am hellsten, Maske stanzt die Mitte aus. Drei Stufen: voll (Karten, Glas-Felder), mittel (X-Knöpfe), leicht (runde Knöpfe). Hell-Modus: überall aus.
+- **Tab-Bar als Liquid-Glass-Pille** (Forma Build 7): schwebend unten, blur(22)/saturate(170), wandernde Indicator-Pille (Tap + Drag), rotes Zähler-Badge am Watchlist-Tab.
+- **X-Knöpfe** Forma-Stil: 36px schwarzer Kreis, gezeichnetes X (3.8, runde Kappen), Innenring im Dark Mode. Fenster-Köpfe: X links; Film-Sheet: X rechts oben.
+- **Alle Icons selbst gezeichnet** (Strich-SVGs, runde Kappen), Zahnrad als Forma-Gearshape. Keine Emoji/Text-Glyphen mehr.
+- **Einstellungs-Sheet** statt confirm(): Erscheinungsbild-Segmente, Kinos verwalten (seit It. 2), API-Key ändern, Cache leeren, Info.
+- **Bestätigungs-Dialoge** nativ (Forma B3/C4): Blur-Box 270px, Hairlines; destruktiv = Abbrechen halbfett + Aktion rot. `confirmDialog()`/`infoDialog()` Promise-basiert.
+- **PWA-Statusleiste** auf `default` (Forma-Lehre: black-translucent macht das Fenster auf iOS 26 ~60px kürzer). **Greift erst nach Neuinstallation der PWA.**
+
+## Iteration 2 (2026-07-29): Tab-Bar-Aktionen, Glas-Felder oben, Kino-Verwaltung
+
+- **Tab-Bar erweitert:** Ansicht-Umschalter (Kugel/Raster) und Zahnrad sitzen jetzt IN der Pille, rechts hinter einem Haarlinien-Trenner (Aktions-Zone, gedimmt, ohne Indicator). Drag startet bewusst nicht auf den Aktions-Knöpfen. Bar 420px breit, unter 375px kompaktere Labels.
+- **Suche/Zeitraum/Genres im Tab-Bar-Stil:** Glas-Ton `rgba(46,46,50,0.82)` + blur als Token `--glass`, Pillenform (Radius 999), Schimmer-Kante auf Suchfeld und Zeitraum-Kapsel, aktive Zeitraum-Pille im Indicator-Look (weiss 0.13 + blaue Schrift). Header ohne Milchglas-Band – die Felder schweben direkt über dem Inhalt. Genre-Zeile überall einzeilig wischbar. «Vorschau»-Label gestrichen (Pills selbsterklärend).
+- **Kino-Verwaltung** (Einstellungen → Kinos verwalten, Vollbild-Fenster im Forma-Muster mit X links und blauem Plus rechts):
+  - Eigene Kinos mit Name, Ort, Link (https wird ergänzt), optionaler Distanz in km. Bearbeiten (Stift) und Entfernen (rotes X, mit Dialog) für alle Einträge, auch Standard-Kinos. «Standard-Kinos wiederherstellen» holt Gelöschte zurück, eigene bleiben.
+  - Reihenfolge per Auf-/Ab-Pfeile; Sortier-Wahl «Eigene Reihenfolge» oder «Nach Distanz» (dann sind die Pfeile weg, die Distanz ordnet).
+  - **Distanz-Logik:** Kinos mit Koordinaten rechnen Luftlinie (Haversine) ab Referenzpunkt; Referenz = freigegebener Standort (iOS-Schalter «Distanz ab Standort», grün) oder sonst Solothurn. Kinos ohne Koordinaten zeigen die manuelle km-Angabe. Grünes «auto»-Badge, wenn live ab Standort gerechnet wird.
+  - **Orts-Erkennung ohne Geocoding-Dienst:** eingebaute Tabelle mit ~50 Schweizer Städten (Ort eintippen reicht, Koordinaten kommen automatisch). Bewusst offline statt Nominatim & Co.: kein Netz-Aufruf, kein Limit, keine Ausfälle. Unbekannte Orte fallen auf manuelle km zurück.
+  - **Geolocation braucht HTTPS** (GitHub Pages, localhost). Über `file://` gibt der Browser keinen Standort her – die App erklärt das im Dialog und rechnet ab Solothurn weiter. Standort-Abfrage mit 10-Min-Cache, leise Aktualisierung beim Öffnen von Sheet/Verwaltung.
+  - Beim ersten Start werden die 9 bisherigen Standard-Kinos (mit Stadt-Koordinaten) in localStorage übernommen, danach gehört die Liste JB.
+- **Film-Sheet:** Kino-Liste kommt aus der Verwaltung («Deine Kinos»), Untertitel zeigt Sortierung und Referenz («ab deinem Standort» / «ab Solothurn»).
+- **Verifikation:** 49 Playwright-Tests grün (23 Regression + 26 neu: Bar-Aktionen, Felder oben inkl. Klappen, CRUD, Reihenfolge, Distanz-Sortierung, Standort-Mock Luzern, auto-Badges, Wiederherstellen, Sheet-Integration), 0 JS-Fehler; Screenshots iPhone 390/320, Desktop, Dark und Light. Bewertungs-Durchläufe 8 → 9.5 → 10/10 (nacktes Vorschau-Label entfernt, Drag-ab-Tab abgesichert, Schmalgeräte-Query ergänzt).
+
+## Iteration 3 (2026-07-29): Knöpfe in der Suchzeile, Drag & Drop, Maps-Routen
+
+JB-Feedback nach Iteration 2 (mit Screenshot): Trennstrich-Zone in der Tab-Bar gefiel nicht, X-Knöpfe sollen im Hell-Modus wechseln, Kinos direkt im Film-Sheet verschieb- und ergänzbar, Tap aufs Kino soll eine Karten-Route öffnen.
+
+- **Knöpfe zurück nach oben (JB-Entscheid):** Ansicht-Umschalter und Zahnrad sitzen als Glas-Kreise in der Suchzeile zwischen Suchfeld und Einklapp-Knopf, das Suchfeld ist entsprechend kürzer. Die Tab-Bar ist wieder eine reine 3-Tab-Pille (318 px) ohne Trenner und Aktions-Zone.
+- **X-Knöpfe im Hell-Modus invertiert:** weisser Kreis, schwarzes X, feine graue Kante (`inset l3`) plus weicher Schatten, sonst wäre der Kreis auf weissen Sheets unsichtbar. Dark bleibt schwarz mit bg3-Innenring.
+- **Drag & Drop statt Pfeile:** Griff mit drei Strichen links an jeder Kino-Zeile, packen und verschieben (Pointer Events, `touch-action:none` am Griff, Nachbar-Tausch bei halber Zeilenhöhe, `lifted`-Schatten). Funktioniert in der Kino-Verwaltung UND direkt in der Kino-Liste des Film-Sheets; Reihenfolge wird sofort gespeichert. Griffe erscheinen nur bei Sortierung «Eigene Reihenfolge».
+- **Kino hinzufügen direkt im Film-Sheet:** «+ Kino hinzufügen» zuunterst in der Liste öffnet das bekannte Formular (liegt über dem Sheet); nach dem Speichern wird die Kino-Sektion im offenen Sheet sofort aktualisiert (`cinemasSectionHTML()` + `updateOpenSheetCinemas()`).
+- **Karten-Routen:** Tap auf die Kino-Zeile (Pin-Icon links signalisiert es) öffnet die Route in Apple Maps oder Google Maps, wählbar in der Kino-Verwaltung («Karten-App für Routen», Standard Apple, Key `kinofilme_v1_mapsapp`). Ziel ist bewusst «Name, Ort» statt der City-Koordinaten: die Karten-App findet so das echte Kino als Ort samt Adresse, nicht nur das Stadtzentrum. Die Kino-WEBSITE bleibt über den runden blauen Knopf rechts in jeder Zeile erreichbar (Programm anschauen). URL-Schemata: `maps.apple.com/?daddr=…&dirflg=d` und `google.com/maps/dir/?api=1&destination=…`.
+- **Verifikation:** 46 Playwright-Tests grün (23 Regression + 23 neu: Suchzeilen-Knöpfe, 3-Tab-Bar, Light-X per Computed Style, Drag in Verwaltung und Sheet inkl. Speicherung, Sheet-Add-Flow, Apple/Google-Umschaltung, Standort-Sortierung ab Luzern), 0 JS-Fehler, Screenshots dark/light. Durchläufe 8.5 → 10/10.
+
+## Iteration 4 (2026-07-29): Seg-Pillen, Kino-Fenster, Bewertung, Sprachfilter
+
+JB-Feedback mit 5 Screenshots. Umgesetzt:
+
+- **Genre-Pfeil:** runder Glas-Knopf rechts der Genre-Zeile schaltet zyklisch zum nächsten Genre (Alle → … → Alle), die Zeile scrollt automatisch zum aktiven Pill. Kein Wischen nötig.
+- **Gleitende Indicator-Pille für ALLE Auswahlfelder** (`attachSegIndicator()`): Vorschau-Zeitraum (graue Pille), Erscheinungsbild, Sprache, Sortierung, Karten-App (blaue Pille). Gleiche UX wie die Tab-Bar: Pille füllt den Slot bis auf 2.5 px, gleitet beim Tippen, folgt beim Ziehen dem Finger und rastet ein (Einrasten löst `click()` auf dem Zielknopf aus, damit die bestehenden Handler die Wahrheit bleiben). Blaue Fläche füllt den Knopf damit voll aus (JB-Wunsch).
+- **Kinos in eigenem Fenster:** Knopf «Kinos in der Nähe» (Pin-Icon) sitzt im Film-Sheet direkt unter den Genres und öffnet ein Vollbild-Fenster (`#cine-picker`, z 102) mit der Kinoliste. Kein langes Scrollen mehr; die Liste unten im Sheet ist weg, ebenso der Erklärsatz («Beschreibung unter Deine Kinos») auf JB-Wunsch. Nicht-DACH-Filme zeigen stattdessen den Hinweis-Satz.
+- **Kino-Zeile neu:** [Griff][Name/Ort → Tap = Route][Distanz][Globus-Knopf = Website][blauer Pin-Knopf = Route, zuhinterst]. Griffe deutlicher (l2 statt l3, grösser). Drag & Drop und «+ Kino hinzufügen» funktionieren im Fenster wie in der Verwaltung.
+- **Bewertung:** klickbare Sterne-Zeile im Sheet (5 Sterne, 1 Stern = 2 TMDB-Punkte, halbe Sterne per Clip-Pfad) mit Zahl und Wort-Label (Herausragend 9+, Sehr gut 8+, Gut 7+, Okay 6+, Mässig 4.5+, sonst Schwach). Tipp öffnet das Bewertungs-Sheet: grosse Sterne, «x.x von 10», Stimmenzahl, Skala-Legende, bis 2 Community-Kritiken via `/movie/{id}/reviews` (de-DE, Fallback en-US, gecacht als `reviews_{id}`).
+- **Sprachfilter:** Einstellungen → «Sprache der Filme» (Alle/DE/EN/FR/IT), filtert «Im Kino» und «Demnächst» nach `original_language`; Watchlist bleibt ungefiltert. Ehrliche Grenze, JB erklärt: TMDB kennt nur die ORIGINALSPRACHE, nicht ob das Kino synchronisiert zeigt.
+- **Kein Trailer:** gerundete bg3-Box, fett «Kein Trailer», oranges Warn-Dreieck. Der file://-Hinweistext unter dem YouTube-Player ist ganz entfernt (JB-Wunsch).
+- **Länderkürzel kurz:** im Sheet-Meta nur noch «(DE)» statt «(Start DE)».
+- **Verifikation:** 3 Suiten grün (23 + 20 + 30 Checks), 0 JS-Fehler; Screens: Grid mit Pfeil, Sheet neu, Bewertungs-Sheet, Kino-Fenster, Einstellungen. Durchläufe 8.5 → 10/10 (gefixt: Umbruch im Bewertungs-Label, doppelte Ellipse in Kritiken).
+
+## Iteration 5 (2026-07-29): Suchband fix, 5er-Sterne, Top-3-Kinos, Halten-Refresh
+
+- **Suchband bleibt kleben:** Titel «MovieView» steht jetzt VOR dem Header und scrollt weg; der Header (nur Suchzeile) klebt als Milchglas-Band oben, die Filme schieben sich sichtbar DARUNTER durch. Dabei echten Alt-Bug gefunden: `overflow-x: hidden` auf html/body machte den Body zum Scroll-Container und brach `position: sticky` seit jeher – Fix: `overflow-x: clip`.
+- **Doppeltipp nach oben:** Doppeltipp aufs Suchband oder den Titel scrollt sanft an den Anfang (wie der Statusleisten-Tipp bei iOS). Taps auf Suchfeld/Knöpfe sind ausgenommen.
+- **Sterne 1 bis 5:** Bewertung überall in Sternen mit halben Schritten (TMDB-Punkte / 2, gerundet auf 0.5). Sheet-Zeile zeigt z.B. «4 · Sehr gut», kleiner Pfeil-raus statt Chevron (öffnet die Detail-Ansicht). Detail: «4 von 5 Sternen», Skala-Karte als sauberes 3-Spalten-Raster (Wort links, Sternwert rechtsbündig in eigener Spalte, Sterne rechts – nichts klebt mehr am Wort), Schimmer-Kante auf Skala- und Kritik-Karten, Community-Wertungen ebenfalls in Sternen («4.5 ★»).
+- **Kino-Titel dynamisch:** ohne bekannten Standort heisst Knopf und Fenster «Meine Kinos»; mit Standort «Kinos in der Nähe» und das Fenster zeigt zuoberst die 3 nächsten Kinos (nach Live-Distanz), darunter mit Zwischentitel «Meine Kinos» alle übrigen. Drag ordnet nur den unteren Block; `reorderFromDom` ordnet grundsätzlich nur die Slots der Kinos im jeweiligen Container um (Top-3 fasst JBs eigene Reihenfolge nicht an).
+- **Genre-Pfeile beidseitig:** links zurück, rechts vor, beide zyklisch, aktives Pill scrollt in Sicht.
+- **Halten zum Aktualisieren:** In der Kachel-Übersicht 1 s ruhig halten → Glas-Karte mit Hinweis «Zum Aktualisieren halten» und blauem Fortschrittsring (startet oben, füllt sich in 2 s); weitere 2 s halten → Ring voll, grüner Haken, «Aktualisiert», Cache geleert und alles frisch geladen. Loslassen oder Bewegung >12 px bricht ab. Klick-Sperre danach mit 350-ms-Auslauf (sonst schluckte sie nach dem Neu-Rendern des Grids den nächsten Tipp – im Screenshot-Lauf entdeckt). Settings-Zeile heisst neu «Aktualisieren» und erwähnt die Halte-Geste.
+- **Verifikation:** 4 Suiten grün (31 + 28 + 20 + 23 Checks), 0 JS-Fehler; Screens: gescrolltes Band, Halte-Overlay (Ring + Done), symmetrisches Bewertungs-Sheet, Top-3-Picker. Durchläufe 7.5 → 10/10 (Sticky-Fix, Klick-Sperren-Fix).
+
+## Iteration 6 (2026-07-29): Watchlist oben, Kugel bis über den Rand, Feinschliff
+
+- **«Zur Watchlist» ohne Scrollen:** Der blaue Watchlist-Knopf sitzt jetzt direkt unter dem Hero (Poster/Titel/Bewertung), volle Breite; unten bleiben nur Cineman/TMDB als Nebenwege.
+- **Kugel-Overscan:** Die Wölbung schob Randkacheln perspektivisch zur Mitte, dadurch blieb am Rand ein leerer schwarzer Streifen. Das Raster deckt jetzt ~28% mehr als den Bildschirm pro Seite (`sphere.ovX/ovY`, mehr Kachel-Pool), die Poster laufen sichtbar über alle Ränder hinaus wie beim phantom.land-Vorbild. Vignette dafür leicht zurückgenommen.
+- **Glasbalken weg:** Der Milchglas-Header aus It. 5 schien im Kugel-Modus als halbtransparenter Balken hinter der Suchzeile durch (backdrop-filter und border-bottom wurden dort nicht zurückgesetzt). Kugel-Modus setzt jetzt beides explizit auf none.
+- **Aktualisieren auch in der Kugel:** Halte-Geste zusätzlich auf der Kugel-Fläche aktiv (gleicher Ablauf); Bewegung >12 px bricht ab, deshalb kollidiert sie nicht mit dem Ziehen, und nach 3 s Halten zählt der Tap nicht als Film-Tipp (Zeit >400 ms).
+- **Done-Haken poliert:** grüner Haken mit Pop-Animation (scale 0.5→1.12→1), Ring wechselt weich auf Grün.
+- **Blaue Auswahlfelder randlos:** seg2 ohne Innenabstand, die blaue Pille füllt das Feld exakt bis zum Rand (kein dunkler Streifen oben/unten mehr); der graue Vorschau-Switcher behält bewusst den Tab-Bar-Look mit 2.5 px Überhang.
+- **Verifikation:** 5 Suiten grün (116 Checks; Kugel-Tap-Test auf mittige Kachel umgestellt, weil die ersten Kacheln seit dem Overscan ausserhalb liegen), 0 JS-Fehler; Screens: Sheet mit Watchlist oben, Kugel randlos, Settings randlose Pille. Durchläufe 8 → 10/10.
+
+## Iteration 7 (2026-07-31): Tab-Bar auf Forma-Mass, fixes Kopfband, Standort-Klartext
+
+- **Tab-Bar exakt wie Forma:** Bodenabstand neu fix 19.75 px statt `max(env(safe-area-inset-bottom), 20px)` – die alte Formel hob die Bar auf JBs iPhone um die Home-Indicator-Zone (~34 px) an, darum wirkte sie «zu hoch». Forma verzichtet bewusst auf die safe-area-Formel (lieferte dort auf dem Gerät falsche Werte); Wert 1:1 übernommen. Breite 318 → 292 px (Formas kompakte Kapsel), Tab-Icon 24 → 25 px, Tab-Lücke 3 → 2 px. Restliche Masse waren schon identisch (Höhe 59.5, Padding 5, Lücke 4, Radius 999, Schatten, Blur, Schrift 10 px, Indicator 2.5 px). Formas Desktop-Regel `max-width: 668px` bewusst nicht kopiert: bei fester Breite 292 px greift sie nie (totes CSS). `--strip-bottom` und alle abhängigen Abstände ziehen automatisch nach.
+- **Fixes Kopfband statt sticky:** Suchzeile, Zeitraum-Zeile und Genre-Zeile sitzen jetzt alle zusammen mit dem Titel im `<header>` (Wrapper `.header-inner`, max 760 px zentriert), und der Header ist `position: fixed` – auf JBs iPhone blieb sticky trotz `overflow-x: clip`-Fix nicht kleben; fixed hängt am Fenster statt an der Scroll-Kette und KANN nicht mitscrollen. Der grosse Titel klappt beim Scrollen per JS 1:1 mit dem Scrollweg zusammen (Höhe + Innenabstand proportional, Text klebt via flex-end am unteren Rand und gleitet nach oben raus, Opacity blendet mit) – wirkt wie das iOS-Grosstitel-Muster. `--header-h` wird live gemessen (ResizeObserver: Zeitraum-Zeile kommt/geht, Genres laden verzögert) und hält den Inhalts-Abstand konstant, damit beim Einklappen nichts springt. Body-Padding oben entfernt (Notch-Zone deckt jetzt das Band selbst ab, sonst doppelt). Kugel-Modus: Header gibt fixed ab (`static` im fixen Kugel-Container, Abstände dort auf margin-top umgestellt). Stolperstein der Runde: mit `box-sizing: border-box` konnte die Titelhöhe nie unter die 24 px Polster fallen – Innenabstand klappt jetzt proportional mit.
+- **Standort-Klartext:** `refreshPosition` reicht den Fehler durch, der Schalter unterscheidet jetzt vier Fälle statt einer Einheitsmeldung: (1) kein sicherer Kontext (`window.isSecureContext === false`, z.B. als Datei geöffnet) → Dialog «Standort braucht HTTPS» erklärt, dass das System die Abfrage blockt, egal was man freigibt, und nennt GitHub Pages als Lösung – DAS war JBs Fall: iPhone-Meldung «Keine Freigabe oder kein Signal» kam, weil die App ohne HTTPS läuft und iOS die Standortabfrage grundsätzlich verweigert. (2) Code 1 Freigabe fehlt/abgelehnt → Weg durch die iPhone-Einstellungen (Datenschutz & Sicherheit → Ortungsdienste → Safari-Websites «Beim Verwenden»). (3) Code 3 Timeout (neu 12 s statt 8 s) → «später nochmals». (4) kein Signal. Endgültig funktionsfähig wird der Schalter erst über HTTPS (GitHub Pages, offener Punkt).
+- **Verifikation:** 6 Suiten grün (150 Checks, neu test_it7.py mit 34: Bar-Geometrie px-genau gegen Forma-Werte, Band bleibt bei Scroll 700 sichtbar inkl. Kacheln darunter, Titel halb/ganz eingeklappt, Band wächst mit Zeitraum-Zeile und `--header-h` folgt, Kugel-Wechsel hin und zurück, Standort mit Freigabe/ohne Freigabe/unsicherer Kontext je richtige Meldung), 0 JS-Fehler; Screens dunkel + hell, oben + gescrollt, Kugel. Durchläufe 9 → 10/10 (Border-Box-Fix).
+
+## Iteration 8 (2026-07-31): Adress-Distanzen, Pfeile-Schalter, Text unter Trailer, Home-App-Standort
+
+- **Adress-Geocoding für Kinos:** Neues Formular-Feld «Adresse (optional, für genaue Distanz)». Ablauf: bekannte CH-Städte weiter sofort über die eingebaute Tabelle (kein Netz-Aufruf); ist der Ort unbekannt ODER eine Adresse angegeben, schlägt die App die Koordinaten im Hintergrund bei OpenStreetMap/Nominatim nach (gratis, ohne Schlüssel, `countrycodes=ch`) und trägt sie am Kino nach – Distanz erscheint, sobald die Antwort da ist. JBs Kritik davor: neue Kinos bekamen trotz exakter Adresse keine Distanz. Ohne Netz oder ohne Treffer bleibt die bisherige Logik (manuelle km). Adresse wird am Kino gespeichert (`addr`).
+- **Genre-Pfeile-Schalter:** Einstellungen → Erscheinungsbild → «Genre-Pfeile» (Schalter, Standard AN). AUS versteckt beide Pfeile (`body.no-genre-arrows`), Wischen der Genre-Zeile geht immer. Key `kinofilme_v1_genrearrows` ('off' = versteckt). Annahme dokumentiert: JBs «Pfeile bei den ganchen» wurde als Genre-Pfeile gelesen (einzige Pfeil-Knöpfe der Oberfläche).
+- **Beschreibung unter den Trailer:** Im Film-Sheet kommen Tagline + Beschreibung jetzt NACH dem Trailer-Block (bzw. der Kein-Trailer-Box), vor den Cineman/TMDB-Knöpfen.
+- **Home-App-Standort (Kernstück):** Neue Faktenlage von JB: Die App läuft BEREITS auf GitHub (Pages, https) und ist von dort als Home-Bildschirm-App installiert. In Safari funktioniert der Standort, in der Home-App nicht. Recherche (firt.dev, WebKit-Fallberichte): Home-Bildschirm-Web-Apps haben KEINEN eigenen iOS-Einstellungs-Eintrag, sie laufen über die Safari-Freigabe, und iOS kann den «Erlauben?»-Dialog in der Home-App nicht anzeigen (landet im falschen Fenster; Abfrage hängt stumm oder scheitert mit Code 1). Es klappt nur, wenn die Freigabe VOR der Frage feststeht. Die Website kann das nicht erzwingen, nur erkennen und anleiten. Eingebaut: `navigator.standalone`-Erkennung, 13.5-s-Stoppuhr gegen das stumme Hängen (der eigene timeout feuert in dem Zustand nicht), und ein eigener Dialog mit der Lösung: Einstellungen → Datenschutz & Sicherheit → Ortungsdienste → Safari-Websites → «Beim Verwenden der App» (nicht «Fragen») PLUS in Safari aA-Menü → Website-Einstellungen → Standort → «Erlauben», dann Home-App neu öffnen.
+- **Verifikation:** 7 Suiten grün (200 Checks, neu test_it8.py mit 25: Schalter-Zyklus mit Persistenz, DOM-Reihenfolge Beschreibung/Trailer, Geocoding mit gemocktem Nominatim inkl. «bekannter Ort ruft NICHT ins Netz», standalone-Ablehnung und stummes Hängen zeigen beide die Anleitung), 0 JS-Fehler. Durchlauf 9.5 → 10/10.
+
+## Iteration 9 (2026-07-31): Standort ab Werk an, Key ohne Neueingabe, Kachelwand-Icon
+
+- **Hintergrund (JBs Test):** In Safari fragt iOS bei JEDEM Besuch nach dem Standort, egal was er erlaubt, und die Home-Bildschirm-App startet mit zurückgesetztem Schalter und ohne API-Key. Zwei Ursachen: (1) Ortungsdienste → Safari-Websites steht bei ihm auf «Beim nächsten Mal fragen» – diese Stufe sieht aktiviert aus, erzwingt aber die ewige Fragerei UND blockiert die Home-App (die den Dialog nicht zeigen kann). Lösung bleibt: auf «Beim Verwenden der App» stellen. (2) Home-Bildschirm-Web-Apps haben bei Apple einen EIGENEN, leeren Speicher, komplett getrennt von Safari – localStorage (Key, Schalter, Watchlist, Kinos) wandert prinzipbedingt NICHT mit. Keine Website kann das verhindern.
+- **Standort ab Werk AN:** `geolocOn()` liest jetzt `!== 'off'` (Standard an, JB-Wunsch); explizites Ausschalten bleibt gespeichert. Zusätzlich holt `boot()` die Position gleich beim Start (leise; ohne Freigabe bleibt Solothurn), damit «Kinos in der Nähe» ohne jedes Zutun stimmt.
+- **API-Key ohne Neueingabe, zwei Wege:** (1) URL-Parameter `?key=...` – beim Start übernommen und gespeichert. Trick für die Home-App: die GitHub-Seite einmal MIT `?key=...` öffnen und dann zum Home-Bildschirm hinzufügen; iOS speichert die Startadresse samt Anhang, der Key richtet sich also bei jedem Start selbst ein. (2) Konstante `DEFAULT_API_KEY` oben im Code (Zeile bei TMDB_BASE): Key eintragen → nie mehr Eingabemaske. ACHTUNG im Kommentar dokumentiert: im öffentlichen Repo ist der Key dann für alle sichtbar; der URL-Weg vermeidet das.
+- **Kachelwand-Icon:** Der Umschalter zur Kugel zeigt statt des Globus ein neues, selbst gezeichnetes Symbol `tilewall`: grosse Poster-Kachel, links/rechts angeschnittene, gewölbte Nachbar-Kacheln – sieht aus wie die Kugel-Ansicht selbst. 3 Varianten-Runden per Screenshot verglichen (blobbige Verlierer verworfen). Der Globus (`sphere`) bleibt für die Website-Knöpfe der Kinos.
+- **Maps nimmt die genaue Adresse mit:** `mapsUrl` baute das Ziel bisher aus Name + Ort, die Route landete darum im Ortszentrum (JB 07-31). Neu `mapsTarget(c)` = Name, Adresse, Ort (leere Teile fallen weg) – der Name trifft den Kino-Eintrag, die Strasse macht ihn eindeutig. Gilt für beide Wege (Namens-Tap und Pin-Knopf, beide nutzen `mapsUrl`). Dazu recherchierte Adressen für alle 9 Standard-Kinos: Capitol Solothurn Berntorstrasse 18, Palace Solothurn Hauptgasse 57, Uferbau Ritterquai 10, Rex Grenchen Bielstrasse 17, Capitol Olten Ringstrasse 9, Lichtspiele Olten Klosterplatz 20, Apollo Biel Zentralstrasse 51a, Lido Biel Zentralstrasse 32a, Cinedome Feldstrasse 32 (Muri b. Bern). Weil JBs Speicher die Kinos schon ohne Adresse enthält, trägt `upgradeCinemas()` sie beim Start nach – nur bei `builtin` und nur wenn leer, von Hand Eingetragenes bleibt unangetastet. Kino-Verwaltung zeigt neu «Adresse, Ort · Distanz»; die Unterzeile ist einzeilig (Adresse kürzt mit Auslassungspunkten, Distanz bleibt immer sichtbar), sonst wären die Zeilen unterschiedlich hoch geworden und der Drag-Test wäre gekippt.
+- **Tests:** Alle 7 Alt-Suiten auf explizit `geoloc='off'` im INIT gestellt (sie testen das EINSCHALTEN; seit It. 9 wäre AN sonst schon Startzustand). Neue test_it9.py (12 Checks): Schalter ab Werk an bei frischem Speicher, Position beim Start automatisch geholt, «Kinos in der Nähe» ohne Zutun, AUS überlebt Neuladen (Test-Neuladen ohne Aufräum-Skript, sonst löscht der Testputz das AUS gleich wieder), URL-Key überspringt Maske und lädt Filme, ohne Key weiterhin Maske, Umschalter zeigt Kachelwand (It. 9), Maps-Route enthält Strasse (Apple und Pin-Knopf identisch), alle 9 Standard-Kinos mit Adresse, Nachtrag greift bei alter Liste ohne eigene Kinos anzufassen. Total 218 Checks in 8 Suiten grün (Stand It. 9). Durchlauf 9 → 10/10 (Start-Position ergänzt, Test-Neulade-Fehler behoben, Zeilenumbruch in der Kinoliste gefixt).
+
+## Iteration 10 (2026-07-31): Key-Anhang repariert, Pfeilsteuerung, Distanz-Standard, Standort-Knopf
+
+- **WARUM der `?key=`-Trick nicht funktionierte (Kern der Runde):** In der `manifest.webmanifest` stand `"start_url": "./"`. Beim «Zum Home-Bildschirm» nimmt iOS diese Adresse und wirft die echte samt Anhang weg – der Key kam darum nie an. Belegt über mehrere WebKit-Fallberichte (Safari ignoriert start_url NICHT, im Gegenteil: sie überschreibt die aktuelle URL; Lösung überall dieselbe: start_url entfernen). `start_url` ist jetzt raus, `scope`, `display` und der Rest bleiben. **JB muss also index.html UND manifest.webmanifest auf GitHub ersetzen.** Zusätzlich liest die App den Key neu auch aus dem Rautenteil (`#key=...`) als zweiter Weg.
+- **«Pfeilsteuerung»:** Der Einstellungs-Schalter heisst neu so statt «Genre-Pfeile» (JB-Wunsch), Funktion unverändert.
+- **Kinos ab Werk nach Distanz:** `loadCinemaSort()` liefert neu `distance` statt `custom`. Beim Antippen eines Films stehen damit sofort die nächstgelegenen Kinos oben, statt JBs Handreihenfolge. Wer «Eigene Reihenfolge» wählt, behält sie (Wahl wird gespeichert). Nebenwirkung dokumentiert: Bei Distanz-Sortierung blendet die App die Drag-Griffe aus (Distanz ordnet ja), darum mussten drei Alt-Suiten `cinemasort='custom'` im INIT pinnen.
+- **Standort-Knopf im Kino-Fenster:** Im Fenster zum Film sitzt links neben dem blauen Plus ein grauer Knopf mit Fadenkreuz (`#picker-locate`). Er schaltet die Ortung nötigenfalls gleich mit ein, holt die Position frisch (`refreshPosition(true, …)`), dreht sich solange (`.busy`, 1 s pro Umdrehung) und aktualisiert danach Liste, Titel und Distanzen. Fehlerfall zeigt dieselben Erklärungen wie der Schalter – dafür wanderte die Dialog-Logik in die gemeinsame Funktion `geoErrorDialog(err)`.
+- **Verifikation:** 9 Suiten grün (238 Checks, neu test_it10.py mit 19: Manifest ohne start_url, Schalter-Beschriftung, Sortier-Segment ab Werk auf Distanz, Picker-Reihenfolge steigend mit Olten zuoberst ab Luzern, Knopf-Position vor dem Plus, Neu-Abruf verändert die gespeicherte Position, Dreh-Zustand geht weg, Fehlermeldung ohne Freigabe, `#key=`-Übernahme), 0 JS-Fehler. Durchlauf 9.5 → 10/10 (Selektor-Fehler im eigenen Test gefunden und behoben).
+
+## Iteration 11 (2026-08-01): Bar-Rückwand, Kino-Vorschläge, Diagnose, Ort von Hand
+
+- **Tab-Bar-Restdifferenz:** Kopf-Metas beider Apps gediffed – viewport-fit=cover, Statusleiste default, alles identisch; die Bar misst im Test weiterhin pixelgenau Formas Werte. Stärkster Verdacht darum: auf JBs iPhone läuft noch ein ÄLTERER Build (die alte safe-area-Formel sass genau «ein kleines Stück» höher). Darum sichtbare Build-Nummer eingebaut: `APP_BUILD = 'Build 11 (01.08.2026)'`, steht in den Einstellungen unter Info. Nach jedem Deploy zuerst dort nachschauen, WELCHER Stand wirklich läuft, bevor irgendetwas diagnostiziert wird.
+- **Deckende Fläche hinter der Bar (`#bar-shade`):** fixed, von der Bar-Oberkante (79.25 px ab unten) bis zum Rand, `background: var(--bg)` (dark schwarz, light heller Grund – Entscheid: im Hellmodus wäre ein schwarzer Balken ein Fremdkörper), z-index 59 direkt unter der Bar, pointer-events none. Kacheln und Kugel verschwinden dahinter statt durchzuscheinen (JB: weniger ablenkend).
+- **«Kinos in der Nähe vorschlagen»:** Knopf zuoberst im Kino-Formular. Fragt Overpass/OpenStreetMap (`amenity=cinema`, 30 km um die Distanz-Referenz, POST an overpass-api.de, gratis/CORS-offen), filtert Namenlose, dedupliziert, sortiert nach Distanz, zeigt max. 12 Treffer (Name, Adresse+Ort, km). Antippen füllt Name/Ort/Adresse/Website UND merkt sich die OSM-Koordinaten (`suggestPick`); Speichern nutzt diese direkt (kein Nominatim-Nachschlagen), ausser die Adresse wurde nach dem Antippen geändert – dann greift wieder der normale Weg. Fehlt die Website bei OSM, sagt es das Formular («bitte kurz ergänzen», URL bleibt Pflichtfeld).
+- **Diagnose-Zeile (`#diag-line`):** unten in den Einstellungen, bei jedem Öffnen frisch: Build · Modus (Home-App/Browser via navigator.standalone) · https ja/nein · Key-Quelle (Adresse/gespeichert/Code/keine) · Ortung an/aus · Position da (Alter in Min)/keine · Freigabe laut System (permissions.query, mit Vorbehalt – auf iOS notorisch unzuverlässig, liefert oft fälschlich «prompt»).
+- **Ort von Hand (Plan B fürs Standort-Elend):** Recherche-Fazit: Home-Bildschirm-Web-Apps laufen IMMER über WebKit und die Safari-Freigaben, egal über welchen Browser abgelegt (ein anderer Browser hilft NICHT); es gibt dokumentierte Fälle (Apple-Entwicklerforum), wo die Ortung in der Home-App trotz komplett korrekter Einstellungen Code 1 liefert. Darum neues Dropdown «Ort von Hand» in der Kino-Verwaltung (49 Städte aus CITY_COORDS, Alias-Duplikate raus, längster Name gewinnt, Key `kinofilme_v1_manualcity`). Rangfolge der Distanz-Referenz: Hand-Ort > Live-Standort > Solothurn; Hand-Ort zählt als «live» (Top-3 + «Kinos in der Nähe»). Der Standort-Knopf im Kino-Fenster löscht den Hand-Ort bei ERFOLG (echter Standort übernimmt). Der Home-App-Dialog verweist neu auf diesen Ausweg.
+- **Verifikation:** 10 Suiten grün (271 Checks, neu test_it11.py mit 33), 0 JS-Fehler, Screens: schwarze Rückwand, Vorschlagsliste, gefülltes Formular, Ort-von-Hand-Zeile. Durchlauf 10/10 im ersten Anlauf.
+
+## Iteration 25 (2026-08-05, Build 26): Standort neu gebaut, Trailer im Breitformat
+
+**JBs Auftrag:** «Ort von Hand» und den Kurzbefehl aus der App nehmen und stattdessen einbauen, was am stabilsten ortet. Auslöser: Er hat in Safari alle Standort-Freigaben fest auf «Erlauben» gestellt. Dazu der Wunsch, Trailer nicht nur hochkant, sondern im Breitformat anschauen zu können.
+
+**Vorgeschaltete Recherche (5 Subagenten, Bericht in `OUTPUT/Standort_in_PWA_5_Wege.md`).** Zwei Befunde bestimmen diese Runde:
+1. Der Fehler «Standalone-PWA fragt nie nach dem Standort» stammt aus iOS 15 (2021/22). Seit Jahren gibt es keine neuen Meldungen mehr, und Apple führt den Standort selbst in der Liste der Systemabfragen für Home-Bildschirm-Web-Apps (WWDC23). Die Annahme, es gehe grundsätzlich nicht, ist überholt.
+2. Der Kurzbefehl-Weg über die Adresse war ohnehin auf Sand gebaut: iOS kennt kein Link-Capturing, `https://` öffnet Safari statt der App, und `webapp://` verwirft Pfad, Parameter und Rautenteil und lädt immer die `start_url` (belegt über PairDrop-Issue 379 und einen Discourse-Bericht vom 21.07.2025). Was bei JB funktionierte, funktionierte nur wegen des Fangnetzes aus It. 24.
+
+### Was raus ist
+
+- **«Ort von Hand»** samt Städte-Auswahl, `cityOptions()`, `cityLabel()`, Speicher-Schlüssel `kinofilme_v1_manualcity` und dem Zweig `ref.manual` in `distanceReference()`.
+- **Der ganze Kurzbefehl-Weg:** `runLocationShortcut()`, `applyUrlCoords()` samt Fangnetz, `handleIncomingAddress()`, `cleanAddress()`, `addressQueries()`, `geocodeAddress()`, `askAddressAndLocate()`, `isApplePhone()`, `DEFAULT_SHORTCUT`, Schlüssel `kinofilme_v1_shortcut`, die Kurzbefehl-Zeile in der Kino-Verwaltung und das Auswahl-Menü am Fadenkreuz.
+- Die alten Speicher-Einträge bleiben harmlos in localStorage liegen, sie werden nirgends mehr gelesen.
+- `listDialog()` ist damit vorerst ungenutzt, bleibt aber als Baustein stehen.
+
+### Was neu ist: `refreshPosition()` mit Genauigkeits-Wettrennen
+
+Der Kern der Runde, und der Grund, warum die Distanzen vorher «fast stimmten»: iOS antwortet auf `getCurrentPosition` oft mit dem erstbesten Wert aus Funkzelle oder WLAN, der gerne 1000 bis 3000 Meter danebenliegt, und schiebt den genauen GPS-Wert erst Sekunden später nach. `getCurrentPosition` nimmt den nicht mehr entgegen, es ist ja fertig.
+
+Neu läuft es über `watchPosition`:
+- jeder eingehende Wert wird am mitgelieferten Genauigkeitswert gemessen, der beste gewinnt
+- unter `GOOD_ACC_M` (100 m) ist sofort Schluss
+- nach `SOFT_MS` (7 s) gilt, was da ist
+- nach `HARD_MS` (16 s) ist die Abfrage gescheitert. Das fängt auch den Fall, in dem iOS gar nichts meldet, weder Erfolg noch Fehler
+- die Genauigkeit wird mitgespeichert (`acc` in `kinofilme_v1_lastpos`), steht in der Diagnose-Zeile und in der Meldung nach dem Fadenkreuz («Standort aktualisiert (auf 18 m genau)»)
+- `posBusy` verhindert zwei Abfragen gleichzeitig
+
+Dazu:
+- **Ortung läuft wieder auf allen Geräten**, auch am iPhone. Der Sonderweg aus It. 21 ist weg.
+- **Auffrischen beim Zurückkehren:** `visibilitychange` holt die Position neu, wenn sie älter als 10 Minuten ist. iOS lädt eine Home-Bildschirm-App beim Zurückholen oft nicht neu, das ist also die einzige Gelegenheit dazu.
+- **Netz-Position läuft nach einer Stunde ab** (`NET_POS_MAX_AGE_MS`). Genau daran ist It. 22 gescheitert: eine alte IP-Position (Lausanne) lag im Speicher und lieferte still falsche Distanzen, während JB im Wallis stand. Eine echte Ortung wird ausserdem nie mehr durch eine geschätzte ersetzt, egal wie alt sie ist.
+- **Fehlerdialoge neu sortiert:** `kein-https`, `laeuft`, Code 1 (Freigabe fehlt, mit dem genauen Weg durch die iPhone-Einstellungen inklusive «Genauer Standort»), `stumm` in der Home-App (mit der belegten Reihenfolge zum Zurücksetzen der Ortungsfreigaben), Code 3 und der Rest. Der Fall `nur-kurzbefehl` ist weg.
+
+### Trailer im Breitformat (It. 25b)
+
+- **Manifest:** `"orientation"` von `portrait` auf `any`. Die Home-App war auf Hochquerformat festgenagelt, drehen half also gar nichts. **JB muss `manifest.webmanifest` mit hochladen, und die Wirkung kommt erst nach dem Neu-Anlegen der Home-App.**
+- **Eigenes Breitbild-Fenster** (`#trailer-full`), erreichbar über den neuen Knopf «Breitbild» im Trailer-Kopf. Warum selbst gebaut: Auf iOS lässt sich ein eingebettetes YouTube-Video nicht über die Vollbild-Funktion des Browsers aufziehen, die gibt es dort nur für echte Video-Elemente.
+- **Dreht sich selbst:** Wird das Telefon hochkant gehalten, kippt `fitTrailerFull()` den Spieler per `rotate(90deg)` und rechnet die Grösse so, dass 16:9 gewahrt bleibt und die kurze Bildschirmseite voll ausgenutzt wird. Wird das Gerät physisch gedreht, fällt die Drehung von selbst weg (`resize` und `orientationchange`).
+- **`playsinline=1` ist Pflicht**, sonst reisst iOS das Video in seinen eigenen Spieler und das Fenster wäre sinnlos. Dazu `autoplay=1`, und der kleine Spieler im Sheet wird angehalten, damit nicht zwei gleichzeitig laufen.
+- **Schliessen:** X oben links, Tipp auf den schwarzen Rand, Escape am Computer. Beim Schliessen wird der Rahmen geleert, das hält das Video an.
+- **Stolperstein, im Testlauf gefunden:** X-Knopf und Hinweis lagen zuerst NEBEN dem Fenster. Am Computer geht das Fenster ins echte Vollbild, und dabei zeigt der Browser nur noch dieses eine Element samt Inhalt an, der Knopf war also weg. Beide liegen jetzt innerhalb.
+- Zweiter Stolperstein: `.x-btn` setzt `display: flex` und überstimmt damit das `hidden`-Attribut. Der unsichtbare Knopf fing Tipps ab, die der Seite darunter galten. Gelöst, indem beide Elemente im Fenster liegen, das sich als Ganzes ausblendet.
+
+**Verifikation:** 221 Checks grün in 4 Suiten, 0 JS-Fehler. Neu `test_it25.py` mit 50 Checks (Ortung beim Start, Quelle und Genauigkeit im Speicher, Wettrennen grob gegen genau mit gefälschtem `watchPosition`, `getCurrentPosition` wird nachweislich nicht mehr benutzt, Fadenkreuz, Schalter bleibt ohne Freigabe an, alte und frische Netz-Position, Reste-Suche im Quelltext, Adresse im Link wirkungslos, Breitbild-Fenster in Hoch- und Querformat). `test_it18.py` auf 72, `test_it15.py` auf 69, `test_it12.py` auf 30 zurechtgestutzt: alle Checks zu Kurzbefehl, Hand-Ort und Link-Koordinaten sind entfernt, weil sie Funktionen prüften, die es nicht mehr gibt.
+
+**JB muss dazu:** `index.html` UND `manifest.webmanifest` im GitHub-Repo ersetzen, danach die Home-App löschen und neu anlegen (sonst greift die Orientierungs-Änderung nicht). Der Kurzbefehl «MovieView» wird nicht mehr gebraucht.
+
+## Iteration 24 (2026-08-04, Build 25): Fangnetz für den Kurzbefehl-Link
+
+**Endlich der Blick in den Kurzbefehl (JB mit Screenshot).** Sein Text-Baustein lautet `webapp://https://jbplayer06.github.io/MovieView/ [PLZ] [Ort]`, die Ausgabe war `webapp://https://jbplayer06.github.io/MovieView/ 3956 Guttet-Feschel`. Darin stecken zwei Fehler: das Schema steht **doppelt** (`webapp://https://` statt `webapp://`), und die Adresse hängt **ohne Parameter** hinten dran. Ohne `#addr=` landet sie im Pfad statt in einem Feld, das sich abfragen lässt – die App konnte sie also gar nicht finden.
+
+- **Fangnetz eingebaut.** Findet die App keinen bekannten Parameter, durchsucht sie `pathname + search + hash` nach dem Muster «vierstellige Zahl, dahinter ein Ortsname». Eine Schweizer Postleitzahl ist eindeutig, in der normalen App-Adresse kommt so etwas nicht vor. Damit funktioniert JBs Kurzbefehl, **so wie er ist**, ohne dass er ihn anfassen muss.
+- **Stolperstein beim Bauen, im Test gefunden:** Sucht man in der GANZEN Adresse statt nur im Teil nach dem Server, geht die Portnummer der Testumgebung (`127.0.0.1:8763`) als Postleitzahl durch, und die App suchte bei jedem Start nach dem Ort «8763». Darum ist der Suchbereich bewusst auf Pfad, Frage- und Rautenteil begrenzt, und der API-Key wird vorher ausgeklammert. Eine Gegenprobe im Test stellt sicher, dass ein normaler Start keine Adress-Suche auslöst.
+- **Pfad wird nach dem Lesen aufgeräumt.** Steckte die Adresse im Pfad, wird auch dieser zurückgesetzt. Sonst klebte sie dort und beim nächsten Wechsel in die App stünde für immer der Ort von damals.
+- **Diagnose zeigt neu den Startlink** (ohne API-Key, auf 120 Zeichen gekürzt). Damit ist am Gerät ablesbar, was der Kurzbefehl wirklich übergeben hat, statt es raten zu müssen.
+
+**Der saubere Kurzbefehl-Text bleibt trotzdem empfehlenswert:** `webapp://jbplayer06.github.io/MovieView/#addr=` gefolgt von PLZ und Ort. Ohne das doppelte Schema und mit Parameter ist der Weg direkt statt über das Fangnetz.
+
+**Verifikation:** test_it18.py auf 113 Checks (Adresse ohne Parameter wird gefunden, Ortsname kommt mit, Position landet im Wallis, Erfolg wird gemeldet, und die Gegenprobe: ein normaler Start löst keine Suche aus). test_it15.py 77, test_it12.py 42. Total 232 Checks, 0 JS-Fehler.
+
+## Iteration 23 (2026-08-04, Build 24): Link-Zeile entwirrt, Standort-Menü, Recherche zum Kernproblem
+
+**JBs Befund:** Der Kurzbefehl-Aufruf öffnete den falschen Kurzbefehl (Forma statt MovieView), und die App bekam statt der Adresse die ganze Zeile «webapp://jbplayer06.github.io/MovieView/#addr=3930 Visp» geliefert, mit der kein Kartendienst etwas anfangen kann. Dazu die Frage, ob sich ein Kurzbefehl auslösen lässt, ohne die App zu verlassen.
+
+**Recherche, zwei belegte Antworten**
+1. **Einen Kurzbefehl im Hintergrund starten geht nicht.** Apple bietet dafür keinen Weg; jeder Aufruf über `shortcuts://` wechselt in die Kurzbefehle-App. Belegt über die Apple-Dokumentation zum URL-Schema und eine Entwicklerfrage genau dazu (StackOverflow 59009131, «Execute Apple Shortcut in Background»). Eine Web-App hat erst recht keinen Zugriff. Der App-Wechsel ist also nicht wegzubauen, nur zu vermeiden, indem man den Kurzbefehl gar nicht mehr braucht.
+2. **Die Ortung in der Home-App IST reparierbar.** Joseph Elfelt (PWA FindMeSAR) hatte auf genau JBs Hardware (iPhone 17 Pro, iOS 26.0.1) dasselbe Problem und hat es gelöst, und zwar erst mit «Einstellungen → Allgemein → iPhone übertragen oder zurücksetzen → Zurücksetzen → Standort & Datenschutz zurücksetzen», danach App löschen, in Safari freigeben, dann neu anlegen. Genau diesen Reset hat JB laut Projekt-Memory bisher nie gemacht. Quelle: m.ai6yr.org/@mappingsupport/115407137741108174. Klappt das, ist der ganze Kurzbefehl-Umweg überflüssig.
+
+**Umbauten**
+- **`cleanAddress()` entwirrt ganze Link-Zeilen.** Sieht der eingegangene Text nach einem Link aus, wird gezielt der Nutzteil geholt (`addr`, `result`, `q` oder `text`), sonst wenigstens Schema, Server und Pfad abgeschnitten, danach prozentkodierte Zeichen aufgelöst. Aus JBs kaputter Zeile wird damit sauber «3930 Visp».
+- **Das Fadenkreuz probiert am iPhone zuerst die Ortung selbst.** Nur wenn die scheitert, kommt ein Auswahl-Menü mit drei Einträgen: Kurzbefehl starten, Adresse von Hand eingeben, oder «Warum klappt die Ortung nicht?». Der letzte Punkt zeigt neu die Reihenfolge mit dem Zurücksetzen der Ortungsfreigaben. Beim App-Start bleibt es dabei, dass gar nicht geortet wird.
+- **Der Kurzbefehl bleibt der Rückfall, nicht der Hauptweg.** Damit ist JB nicht mehr darauf angewiesen, dass ein fremdes Fenster aufgeht.
+
+**Verifikation:** test_it18.py auf 106 Checks (ganze Link-Zeile wird auf «3930 Visp» eingedampft und enthält kein «webapp»/«github» mehr, Position landet in Visp, Fadenkreuz ortet erst selbst, danach steht das Menü mit allen drei Einträgen bereit, «Adresse von Hand» öffnet das Eingabefeld). test_it15.py 77, test_it12.py 42. Total 225 Checks, 0 JS-Fehler.
+
+**Offen bei JB:** Der falsche Kurzbefehl (Forma) deutet darauf hin, dass der eingetragene Name nicht mit dem echten übereinstimmt. Name in der Kino-Verwaltung unter «Kurzbefehl» prüfen, er muss buchstabengetreu stimmen.
+
+## Iteration 22 (2026-08-04, Build 23): Adress-Weg repariert, ehrliche Rückmeldung
+
+**Der Befund von JB:** Er stand im Wallis, das Kino in Visp zeigte 99 km. Nachgerechnet: Lausanne nach Visp sind exakt 99 km, Solothurn wären 105 km. Die App rechnete also ab Lausanne, einem klassischen Treffer der IP-Ortung aus früheren Builds, die als `src: 'net'` im Speicher lag. Die frisch gelieferte Adresse kam nie an oder wurde nicht gefunden, und das Schlimme: **die App sagte kein Wort und rechnete still mit der alten Position weiter.** Das war der eigentliche Fehler dieser Runde, nicht der Kartendienst.
+
+- **Adressen werden vor der Suche geputzt.** Der Kurzbefehl liefert die Adresse mehrzeilig («Bahnhofstrasse 2», Umbruch, «3930 Visp», Umbruch, «Schweiz»). Gegen Nominatim getestet: Mit Zeilenumbruch gibt es NULL Treffer, mit «3930 Visp» kommt Visp sofort. `cleanAddress()` macht aus Umbrüchen Kommas, wirft Mehrfach-Leerzeichen und ein angehängtes «Schweiz/Suisse/Svizzera/CH» weg.
+- **Mehrstufige Suche statt einem Versuch.** `addressQueries()` baut die Anläufe vom genauesten zum gröbsten: ganze Adresse, dann «PLZ Ort», dann die reine vierstellige Postleitzahl, dann der letzte Teil nach dem Komma. Eine Schweizer PLZ trifft immer, damit ist der Weg praktisch narrensicher.
+- **Ehrliche Rückmeldung.** Erfolg zeigt neu ein kurzer Toast «Standort erkannt: Visp, Wallis», der von selbst verschwindet. Misserfolg öffnet einen Dialog, der WÖRTLICH zeigt, was der Kurzbefehl geliefert hat, und sagt, dass jetzt mit einer alten Position gerechnet wird. Stilles Weiterrechnen gibt es nicht mehr.
+- **Zurück auf den bewährten Rückweg.** Der Kurzbefehl-Aufruf läuft neu über das schlichte `shortcuts://run-shortcut?name=…` ohne x-callback. Der Rückweg gehört wieder dem Kurzbefehl selbst («URLs öffnen» mit `webapp://…/#addr=…`), und dieser Weg ist seit It. 14 auf JBs Gerät belegt. Der x-callback-Rückkanal war neu und ungetestet, und genau dort blieb der erste Anlauf hängen. `result=` wird weiterhin gelesen, falls es bei ihm doch klappt.
+- **Alte Netz-Position wird am iPhone einmalig verworfen.** Sie stammt aus der Zeit vor It. 21, wird dort nie mehr aufgefrischt und hätte für immer falsche Distanzen geliefert (genau JBs Fall).
+- **«Adresse eingeben …» in der Liste «Ort von Hand».** Die 49 eingebauten Städte enthalten Visp nicht; wer unterwegs ist, hatte ohne Kurzbefehl gar keinen Weg. Neu lässt sich eine beliebige Adresse eintippen, sie wird nachgeschlagen und als Position gesetzt.
+- **Diagnose-Zeile zeigt neu die Koordinaten** (auf drei Stellen) und die zuletzt empfangene Adresse samt erkanntem Ort. Damit wäre der Lausanne-Fall sofort sichtbar gewesen.
+
+**Verifikation:** test_it18.py auf 95 Checks (mehrzeilige Adresse wird geputzt, «Schweiz» abgeschnitten, PLZ greift als Rückfall, Position landet in Visp, Erfolg wird gemeldet, Fehlschlag öffnet einen Dialog mit dem empfangenen Text, alte Netz-Position wird verworfen). test_it15.py 77 (Liste hat neu «Adresse eingeben …» an dritter Stelle), test_it12.py 42. Total 214 Checks, 0 JS-Fehler. Nominatim-Verhalten vorab per curl belegt.
+
+## Iteration 21 (2026-08-04, Build 22): Standort nur noch über den Kurzbefehl, Haken und Dialoge
+
+**Standort komplett umgebaut (JB-Auftrag).** Ausgangslage: Der Kurzbefehl lief bei JEDEM Öffnen der App, weil der Kurzbefehl selbst das App-Symbol auf dem Home-Bildschirm ersetzt hatte. Zusammen mit der ohnehin langen Startzeit war das mühsam, und die Koordinaten kamen unzuverlässig an. Dazu sprang der Schalter «Distanz ab Standort» nach jedem gescheiterten Ortungsversuch zurück auf Aus, wodurch JB ihn gar nicht mehr einschalten konnte.
+
+- **Auf dem iPhone ortet die App nicht mehr selbst.** Weder die Browser-Ortung (hing dort bis zu 13 Sekunden, bevor sie aufgab) noch der IP-Notnagel laufen noch. Erkannt über `isApplePhone()`; am Computer bleibt die Browser-Ortung, dort arbeitet sie zuverlässig.
+- **Der Kurzbefehl startet NUR noch auf Knopfdruck**, nämlich über das Fadenkreuz im Fenster «Kinos in der Nähe». Umgesetzt über das dokumentierte Shortcuts-Schema `shortcuts://x-callback-url/run-shortcut?name=…&x-success=…`. Als Home-App wird die Rücksprung-Adresse auf `webapp://` umgeschrieben, damit die App und nicht Safari aufgeht. Quelle: support.apple.com/guide/shortcuts (Run a shortcut using a URL scheme, Use x-callback-url).
+- **Der Kurzbefehl liefert neu nur noch die ADRESSE.** Shortcuts hängt seine Textausgabe beim x-callback-Weg selbst als `result` an die Rücksprung-Adresse. `applyUrlCoords()` liest `addr` oder `result`, `geocodeAddress()` schlägt die Koordinaten bei Nominatim nach (`countrycodes=ch`). Der alte Weg mit fertigen Koordinaten (`#lat=&lon=`, `pos=`) bleibt als Rückfall drin und wird zuerst geprüft. Steht im Adressfeld ausnahmsweise doch ein Koordinatenpaar, wird es direkt genommen.
+- **Name des Kurzbefehls:** «MovieView», als `DEFAULT_SHORTCUT` im Code und änderbar in der Kino-Verwaltung unter «Kurzbefehl» (Key `kinofilme_v1_shortcut`). Die Zeile erscheint nur am iPhone.
+- **Der Schalter bleibt an, egal was die Ortung sagt.** Am iPhone läuft beim Einschalten bewusst gar keine Abfrage und darum auch keine Fehlermeldung mehr. Am Computer kommt die Meldung weiterhin, der Schalter bleibt trotzdem stehen.
+- **Ohne frische Position gilt die zuletzt bekannte** (JB-Entscheid). Das war schon so, weil `distanceReference()` `loadLastPos()` ohne Haltbarkeitsgrenze liest; nur wenn es noch nie eine Position gab, wird ab Solothurn gerechnet.
+- **Neuer Fehlerfall `nur-kurzbefehl`** mit eigener Erklärung, die auf das Fadenkreuz und den Namen des Kurzbefehls verweist.
+
+**Zwei Korrekturen aus JBs Screenshot**
+- **Haken beim Aktualisieren stand quer.** Ursache: `.hr-ringwrap svg { transform: rotate(-90deg) }` traf jedes SVG im Wrapper, also auch den Haken, der dadurch wie ein «>» aussah. Neu greift die Drehung nur noch auf das direkte Ring-SVG, und `.hr-ico svg` setzt sie ausdrücklich zurück.
+- **Dialog-Knöpfe in fester Reihenfolge:** «Details» links, «OK» rechts. `confirmDialog` baut den linken Knopf aus `cancelLabel`, darum sind die Rollen in `geoErrorDialog` getauscht und das Ergebnis wird umgekehrt gelesen.
+
+**Verifikation:** test_it18.py auf 84 Checks (Ring gedreht/Haken nicht, Knopfreihenfolge und dass der linke Knopf wirklich die Details öffnet, Schalter bleibt trotz Fehler an, iPhone-Lauf mit echter User-Agent-Kennung: keine Browser-Ortung beim Start und auch nicht nach dem Fadenkreuz, Kurzbefehl-Zeile mit vorbelegtem Namen, Adresse aus `result=` wird geocodiert und aus dem Link entfernt). test_it15.py 77, test_it12.py 42 (Check 18 präzisiert: die alte Zwischenablage-Zeile bleibt weg, die neue Kurzbefehl-Zeile ist erlaubt und am Computer ausgeblendet). Total 203 Checks, 0 JS-Fehler.
+
+**JB muss dazu zwei Dinge tun:** den Kurzbefehl auf Adress-Ausgabe umbauen und das normale App-Symbol statt des Kurzbefehls auf den Home-Bildschirm legen. Anleitung stand im Chat.
+
+## Iteration 20 (2026-08-02, Build 21): Schlagschatten an der Spaltenkante weg
+
+- **Kein schwarzer Verlauf mehr an der Kante der Fenster am Computer (JB mit Screenshot).** Die Film-Spalte, das Kino-Fenster, das Ticket-Fenster und die Ticket-Grossanzeige hatten je einen `box-shadow: -24px 0 60px rgba(0,0,0,0.45)`, der sich als dunkler Streifen über die Kacheln daneben legte. Ersatzlos entfernt, auch die Hell-Modus-Varianten. Die Abgrenzung übernimmt die bereits vorhandene Haarlinie `border-left: 1px solid var(--bg3)`. Deckt sich mit dem Designsystem, das Drop-Shadow-Verläufe verbietet und «entweder Hintergrundwechsel oder Linie, nie beides» vorgibt. **Bewusst behalten:** der Schatten unter der Kino-Verwaltung und den Einstellungen, weil das mittige Panels sind, die wirklich schweben und ohne Schatten am Rand verschwimmen würden.
+
+**Verifikation:** test_it18.py auf 67 Checks (neu: alle drei Spalten ohne Schlagschatten, Haarlinie steht weiterhin), test_it15.py 77 und test_it12.py 41 grün. Total 185 Checks, 0 JS-Fehler.
+
+## Iteration 19 (2026-08-02, Build 20): Knöpfe auf Apple-Mass, Tickets umbenennen, alle Kommentare
+
+- **Alle runden Knöpfe auf 44 px (recherchiert, JB-Auftrag).** Belegt aus Apples Human Interface Guidelines: Standard-Bediengrösse iOS 44x44 pt, Mindest-Trefferfläche für einen Finger ebenfalls 44x44 pt, und die Grössenstaffel für runde Knöpfe lautet Mini 28, Small 32, Regular 44, Large 52, Extra large 64. Die App lag mit 34 bis 38 px zwischen den Stufen und damit unter dem Standard. Neu 44 px («Regular») für: X-Knöpfe, Plus und Standort-Knopf in den Fensterköpfen, Website- und Route-Knopf der Kinos, Stern auf den Filmkacheln, Genre-Pfeile, Ticket-Löschknopf, Stift und Löschknopf in der Kino-Verwaltung, Zieh-Griff. Die Symbole darin wachsen im gleichen Verhältnis mit (X 16 → 20, Plus und Fadenkreuz 18 → 22, Globus und Pin 17 → 20, Stern 17 → 21, Griff 18/19 → 22/23, Stift 15 → 18, Zeilen-X 14/15 → 17/18, Chevrons 16 → 19), das Kino-Favicon von 26 auf 30 px. **Bewusst NICHT angefasst:** die Tab-Bar (pixelgenau auf Forma abgestimmt, Icons bleiben 25 px) und der Einklapp-Knopf der Seitenleiste (dort gilt die macOS-Regel: Standard 28 pt, Maus statt Finger). Quellen: developer.apple.com/design/human-interface-guidelines/buttons und /accessibility.
+- **Tickets umbenennen (JB):** Tipp auf den Ticket-Namen öffnet einen Eingabe-Dialog, ein dezentes Stift-Symbol neben dem Namen zeigt das an. Neuer `promptDialog(title, msg, value, okLabel)` im Stil der bestehenden Dialoge (Textfeld `.ainput`, Feld wird scharfgestellt und der Name markiert, Enter speichert, leere Eingabe zählt als Abbruch). `renameTicketById()` fasst nur das Namensfeld an, der Blob bleibt unberührt. Der Rest der Zeile öffnet weiterhin die Grossanzeige.
+- **«Weitere Kommentare anzeigen» (JB):** `fetchReviews` holt neu ALLE Kritiken statt nur zwei (bis 40 Stück aus maximal 3 Seiten, Deckel wegen Zwischenspeicher-Grösse; eine kaputte Folgeseite bricht die Schleife, kippt aber nicht die Liste). Angezeigt werden weiter zwei, darunter sitzt der Knopf mit der Anzahl in Klammern; ein Druck hängt den Rest darunter an und der Knopf verschwindet. Sichtbar wird das durch Scrollen im Bewertungs-Fenster. **Neuer Cache-Schlüssel `reviews2_`**, sonst hätten die alten Zweier-Listen im Speicher den Knopf nie erscheinen lassen.
+
+**Verifikation:** test_it18.py auf 63 Checks erweitert (Knopf-Masse einzeln nachgemessen inkl. Symbolgrösse und Gegenprobe, dass die Tab-Bar unangetastet bleibt; Umbenennen mit Vorbelegung, Abbrechen, Speichern und Überleben eines Neuladens; Kommentare zwei → fünf, Knopfbeschriftung, Knopf verschwindet, Fenster scrollbar). test_it15.py 77 (Favicon-Check auf 30 px) und test_it12.py 41 Checks grün. Total 181 Checks, 0 JS-Fehler. Screens: Raster, Film-Spalte, Kino-Fenster, Tickets, Umbenennen-Dialog, Bewertung auf- und zugeklappt, Handy 390.
+
+## Iteration 18 (2026-08-02, Build 19): Kino-Vorschläge robust, Tickets ohne Plus, Scrollbalken weg
+
+JB-Feedback auf Build 18 (5 Screenshots): Kino-Vorschläge fielen live komplett aus, dazu Text- und Bedien-Feinschliff.
+
+- **Kino-Vorschläge («Kinos in der Nähe vorschlagen») abgesichert.** Live-Befund am 02.08.: overpass-api.de gab 504, kumi.systems und private.coffee antworteten gar nicht (aus der Cowork-Umgebung nachgemessen), darum JBs Fehlermeldung «drei Server probiert». Zwei neue Ebenen: (1) Der SCHWEIZER Overpass-Server `overpass.osm.ch` (Betreiber: Schweizer OSM-Verein, nur CH-Daten, kaum Last, antwortete in ~1 s) steht neu ZUERST in der Kette, die drei weltweiten bleiben als Rückfall. (2) Scheitern alle vier, springt die Nominatim-Suche ein (`/search?q=cinema` mit 30-km-Kasten um die Referenz, `addressdetails` + `extratags` für Adresse und Website) – anderer Dienst, andere Infrastruktur, lieferte im Test 12 Treffer, als Overpass weltweit platt war. Fehlermeldung entsprechend neu formuliert («vier Server und ein Ausweichdienst probiert»). Grenznahe Kinos im Ausland kämen nur von den weltweiten Servern, für die CH-App verschmerzbar. Die abweichende Fehlermeldung in der Home-App war nicht reproduzierbar; mit der neuen Kette sollte der Fall gar nicht mehr eintreten, sonst nachfassen.
+- **Tickets ohne Plus-Knopf (JB):** Die gestrichelte Fläche IST jetzt der Hinzufügen-Knopf («Tickets hinzufügen», Untertitel «(Fotos und PDFs)», am Computer mit Zusatz «, auch per Hineinziehen»). Sie ist neu auch am Handy sichtbar, Tipp öffnet den Systemdialog; der blaue Plus-Knopf im Kopf ist weg. Ziehen am Computer funktioniert weiter auf der ganzen Fensterfläche.
+- **Texte gestrafft (JB, markiert):** Leermeldung nur noch «Noch keine Tickets gespeichert.», der Plus/Mail-Erklärsatz ist raus. In der Ziehfläche ist «oder über das Plus auswählen» raus. Einstellungszeile «Kinos verwalten» ohne Untertitel «Hinzufügen, ordnen, Distanzen».
+- **Scrollbalken überall ausgeblendet (JB):** Am Windows-Laptop zeichnete der Browser weisse Regler samt weissem Hintergrund in die Fenster (Screenshot Kino-Verwaltung). Global `scrollbar-width: none` plus `::-webkit-scrollbar` auf 0 – Scrollen (Rad, Trackpad, Finger) bleibt, nur die Anzeige fällt weg. Deckt sich mit der Designsystem-Regel «Scroll-Areas ohne sichtbare Scrollbars».
+
+**Verifikation:** test_it18.py auf 42 Checks erweitert (Scrollbalken weg, Flächen-Klick öffnet die Dateiauswahl, Plus weg, Leermeldung kurz, Hineinzieh-Text nur am Computer, Handy zeigt die Fläche, Einstellungszeile ohne Untertitel, Nominatim-Rückfall liefert Vorschläge bei toten Overpass-Servern, osm.ch steht zuerst). test_it15.py 77 und test_it12.py 41 Checks grün (Build-Check auf 19). Total 160 Checks, 0 JS-Fehler. Live-Erreichbarkeit der Dienste per curl belegt.
+
+## Iteration 17 (2026-08-02, Build 18): Feinschliff + Tickets zum Film
+
+JB-Feedback auf Build 17 (mit 2 Screenshots) plus eine neue Funktion. Alle Annahmen vorab per Rückfrage geklärt (Zuordnung pro Film, weisser Kreis in beiden Modi, PDF-Anzeige im App-Fenster, Systemdialog als Ticket-Quelle).
+
+**Feinschliff**
+- **Website-Knopf der Kinos:** Favicon neu 26 px mittig (Mitte zwischen den 18 px von früher und der Vollfüllung aus Build 17), der Rest des 38-px-Kreises ist WEISS – in beiden Modi (JB-Entscheid, bewusste Ausnahme von der Dark-Mode-Regel, nur für diesen Knopf). So bleibt das kleine Favicon-Bild scharf. Die Fallback-Kugel färbt dunkel (#1C1C1E), sonst wäre sie auf Weiss unsichtbar; feine Innenkante 0.5 px für die Abgrenzung auf hellen Flächen.
+- **X-Knöpfe wie die Stern-Knöpfe der Filmkarten (JB):** Hintergrund neu `var(--star-bg)` (halbtransparent + blur(8px)) statt deckendem Schwarz; der Forma-Innenring ist weg, die Stern-Knöpfe haben auch keinen. Hell-Modus behält Kante und Schatten, der Hintergrund kommt ebenfalls aus `--star-bg` (0.85 Weiss).
+- **Grauton hinter den Genre-Zeilen der Seitenleiste gefixt:** Ursache waren `box-shadow` und `backdrop-filter` der Handy-Pillen, die trotz `background: none` in der Leiste weiterwirkten. Beides ist in der Leiste jetzt explizit aus.
+- **Genres im Film-Detail** (Action, Abenteuer …) sitzen neu OBERHALB des Watchlist-Knopfs, direkt unter dem Hero (JB mit Screenshot).
+
+**Tickets zum Film (Kernstück)**
+- **Knopf «Tickets anzeigen»** zwischen Watchlist- und Kino-Knopf, erscheint NUR bei Filmen auf der Watchlist (JB-Entscheid) und kommt/geht live beim Umschalten des Watchlist-Knopfs (`#ticket-btn-wrap`, delegierter Click).
+- **Ablage in IndexedDB** (`movieview_tickets`, Store `tickets`, Index `movie` auf movieId): Fotos und PDFs sind Blobs und zu gross für localStorage; IndexedDB überlebt das Schliessen der App (auch als Home-App) und sogar Updates der index.html. Kein Sicherheitsspeicher, bewusst (JB: Tickets sind nach dem Film wertlos).
+- **Hinzufügen:** blaues Plus → iOS/Browser-Systemdialog (`input type=file`, `accept="image/*,.pdf"`, Mehrfachauswahl). Auf dem iPhone bietet der Dialog Fotomediathek und Dateien-App an; Mail-Anhänge sichert JB einmal über Teilen → «In Dateien sichern». Direkter Mail-Zugriff ist einer Web-App technisch verwehrt (Sandbox); recherchiert und JB erklärt: ganze E-Mails geben beim Ziehen in den Browser keine Datei her. ZUSÄTZLICH Drag & Drop am Computer: gestrichelte Ziehfläche (nur ≥900 px sichtbar), ganze Fensterfläche nimmt an, Fläche leuchtet blau auf. Nur Bilder/PDFs werden angenommen, Rest wird mit Hinweis abgelehnt.
+- **Fenster im cine-picker-Muster** (`#ticket-win` z 103, Grossanzeige `#ticket-view` z 104): am Computer deckungsgleich über der Film-Spalte, am Handy Vollbild. Zeile: Foto-Vorschau bzw. «PDF»-Kachel, Name, «Foto/PDF · hinzugefügt [Datum]», rotes X mit confirmDialog (destruktiv). Tipp auf die Zeile = Grossanzeige zum Vorzeigen an der Kasse (weisser Grund hinter Bild/Seiten, damit QR-Codes lesbar bleiben).
+- **PDF-Anzeige:** pdf.js von cdnjs, LAZY erst beim ersten PDF geladen (App-Start bleibt frei von Fremdcode), Seiten als Canvas in 2x-Auflösung. Ohne Netz ehrlicher Fallback: Hinweis plus «Im Browser öffnen» (Blob-URL). Objekt-URLs werden beim Neuzeichnen/Schliessen freigegeben (Speicher).
+- **Stapel-Logik:** Escape schliesst Ebene für Ebene (Grossanzeige → Ticket-Fenster → …), Klick in den Filmbereich räumt weiterhin alles ab. Neues Icon `ticket` im hauseigenen Strich-Stil.
+
+**Verifikation:** neue test_it18.py mit 36 Checks grün (Glas-X, Pillen ohne Schatten/Blur, Genre-Reihenfolge im DOM, Knopf nur bei Watchlist inkl. Umschalten, Fenster-Geometrie deckungsgleich zur Film-Spalte, Foto+PDF hinzufügen, Textdatei abgelehnt, Grossanzeige, PDF-Fallback ohne Netz, Persistenz über Neuladen, Tickets hängen am richtigen Film, Löschen mit Rückfrage und Abbrechen, Backdrop-Stapel, Handy: Knopf da, Ziehfläche weg). test_it15.py auf 77 Checks angepasst (Favicon neu 26 px im weissen Kreis), test_it12.py Build-Check auf 18. Total 154 Checks in 3 Suiten, 0 JS-Fehler. Screens: Desktop dunkel (Sheet, Tickets, Kinos), Desktop hell, Handy 390.
+
+## Iteration 16 (2026-08-02, Build 17): Feinschliff nach JBs erstem Blick
+
+Drei Korrekturen aus dem Live-Test von Build 15, alle nur am Computer sichtbar.
+
+- **Favicon füllt den ganzen Kreis.** Vorher sass es als 18-px-Quadrat mit weissem Rand mitten im 38-px-Kreis und wirkte verloren. Neu `inset: 0`, volle Grösse, `object-fit: cover`, runde Ecken. Breite Logos werden dabei links und rechts angeschnitten, das nimmt JB bewusst in Kauf.
+- **«Kinos in der Nähe» legt sich über die Film-Spalte** statt mittig im Bildschirm zu erscheinen. Gleiche Kante, gleiche Breite (`var(--film-w)`), gleiche Höhe wie `.sheet`, darum wirkt es wie eine zweite Ebene desselben Fensters. Die Kino-**Verwaltung** bleibt bewusst ein mittiges Panel: sie kommt aus den Einstellungen und gehört nicht zum Film.
+- **Einstellungen schweben frei in der Mitte**, nach dem Vorbild der Claude-Desktop-App (JB mit Screenshot): rundum 22 px Radius, max 680 px breit und 82 vh hoch, weiches Ein- und Ausblenden mit leichter Skalierung statt Hereinfahren von unten, Ziehgriff ausgeblendet. Gilt auch für das Kino-Formular und das Bewertungs-Sheet, weil sie dieselbe Klasse teilen und ein einzelnes von unten hereinfahrendes Fenster daneben schräg ausgesehen hätte. Am Handy bleibt überall das vertraute Sheet von unten.
+
+- **Klick daneben räumt den ganzen Stapel ab** (JB 08-02): Ein Klick in den Filmbereich schliesst neu Kino-Formular, Kino-Fenster, Bewertung UND die Film-Spalte auf einmal. Vorher blieb hinter dem geschlossenen Film noch das Kino-Fenster offen stehen. Escape geht weiterhin bewusst Ebene für Ebene zurück, dafür ist die Taste da.
+
+**Verifikation:** test_it15.py auf 76 Checks erweitert (neu: Favicon füllt den Kreis und wird beschnitten, Kino-Fenster deckt sich px-genau mit der Film-Spalte und liegt darüber, Einstellungen frei schwebend und zentriert). test_it12.py 41 Checks grün. 0 JS-Fehler.
+
+## Iteration 15 (2026-08-02): Seitenleiste ausgebaut, Film als Spalte rechts
+
+JB hat aus den 30 Varianten gewählt und dazu ein Paket weiterer Wünsche gestellt. Build 15.
+
+**Seitenleiste (ab 900 px)**
+- **Randlos und Hintergrund nach Variante 20:** läuft vom oberen bis zum unteren Fensterrand, keine runden Ecken, kein Glas mehr, sondern `--bg2` (eine Stufe heller als der Inhalt). Keine Trennlinie zum Inhalt: Tiefe kommt aus der Schichtung, das hält die Designsystem-Regel «nie Linie und Hintergrundwechsel zugleich» ein. Aktiver Punkt neu `--bg3` statt Glas.
+- **Inhalt der Leiste:** Titel «MovieView», Überschrift «Ansicht» mit den drei Tabs, Überschrift «Genres» mit der Genre-Liste, unten «Einstellungen». Das Zahnrad oben rechts wird am Computer ausgeblendet.
+- **Genres wandern aus dem Kopfband in die Leiste.** Umgesetzt, indem `#filter-wrap` per JS verschoben wird (`applySidebarLayout`, an `matchMedia` gehängt), NICHT indem ein zweites Genre-Gerüst gebaut wird. Ein Block, eine Logik, am Handy ändert sich gar nichts.
+- **Anzahl Filme je Genre:** in `renderGenres` aus derselben gefilterten Basis gezählt wie die Liste selbst, zeigt also genau das, was ein Klick bringt. Am Handy per CSS ausgeblendet (`.pill-count`), sichtbar nur in der Leiste.
+- **Einklappbar auf 78 px** nach dem Muster von Variante 25: Knopf oben rechts in der Leiste, Tab-Beschriftungen weg, Genres als Drei-Buchstaben-Kürzel (`.pill-short`), Zustand in `kinofilme_v1_sbcollapsed`. Die Tab-Beschriftungen mussten dafür per JS in ein `<span class="tab-label">` gepackt werden, sie standen vorher als nackter Text im Knopf und liessen sich nicht ausblenden.
+
+**Film-Detail als Spalte rechts (nur Computer)**
+- `.sheet` fährt am Computer nicht mehr von unten in die Mitte, sondern von rechts herein, volle Fensterhöhe, Standardbreite 34 vw, gespeichert in `kinofilme_v1_sheetw`. Inhalt und Reihenfolge bleiben identisch zum Handy, nur der Rahmen ist ein anderer (JB-Wunsch).
+- **Breite ziehbar** über eine schmale Kante links (`#sheet-resize`, Pointer Events), Grenzen 340 px bis 62 vw. Darunter wird das Poster unleserlich, darüber bleibt vom Kachelraster nichts übrig.
+- Schliessen wie bisher: X oben, Klick daneben, Escape. Das Fenster legt sich über die Kacheln statt sie zu verschieben (JB-Entscheid: ruhiger, kein Umbrechen des Rasters beim Ziehen).
+
+**Kinos**
+- **Favicon der Kino-Webseite** statt der gezeichneten Kugel, über Googles Symbol-Dienst (JB-Entscheid wegen der Trefferquote). Das Bild liegt über der Kugel und entfernt sich bei einem Fehler selbst (`onerror`), dann steht wieder die Kugel da. Betrifft die Kino-Zeilen im Fenster zum Film (`cinemaRowHTML`), nicht die Verwaltungsliste.
+- **«Standard-Kinos wiederherstellen» ersatzlos entfernt** (JB-Entscheid). Wer ein Standard-Kino löscht, legt es von Hand neu an, dabei hilft «Kinos in der Nähe vorschlagen».
+- **Statuszeile zuunterst in der Verwaltung** (`#cine-status`) sagt einmal, woher die Distanzen kommen: auto, netz, Hand-Ort oder fix ab Solothurn. Dafür ist das Abzeichen an jeder einzelnen Kino-Zeile weggefallen, das war JB zu aufdringlich.
+
+**Standort**
+- **«Ort von Hand» erscheint nur noch, wenn «Distanz ab Standort» aus ist.** Untertitel neu «Eigenen Standort bestimmen».
+- **Startzustand ist «Aus» und tut bewusst nichts.** Begründung von JB: Wer den Schalter oben ausgeschaltet hat, will vielleicht gar keinen Standort. Erst die Wahl einer Stadt oder von «Automatisch» aktiviert etwas. «Automatisch» schaltet den Schalter oben wieder ein.
+- **Native Auswahlliste ersetzt** durch `listDialog()`: derselbe schwebende Block wie die Bestätigungs-Dialoge, scrollbare Liste, Häkchen beim aktiven Eintrag. Städte alphabetisch, Aliasse zusammengefasst.
+
+**Fehlermeldungen**
+- Standortfehler zeigt neu nur noch «Der Standort konnte nicht abgerufen werden.» mit den Knöpfen OK und Details. Details öffnet einen zweiten schwebenden Block mit der bisherigen Erklärung und «Verstanden». Technisch bleibt `geoErrorDialogInner` die Quelle der vier Fehlertexte, `geoErrorDetails` holt Titel und Text daraus ab. `confirmDialog` nimmt neu einen eigenen Text für den linken Knopf, `infoDialog` einen für OK.
+
+**Verifikation:** neue test_it15.py mit 58 Checks grün (Leisten-Geometrie px-genau, Hintergrundfarbe, Genres verschoben, Zähler, Einklappen inkl. Überleben eines Neuladens, Film-Spalte rechts inkl. Ziehen und Obergrenze, Handy-Gegenproben, Favicon, Statuszeile, «Ort von Hand»-Sichtbarkeit und Reihenfolge der Städte, beide Fehlerdialoge). test_it12.py auf 41 Checks angepasst und grün. 0 JS-Fehler. Screenshots Computer ausgeklappt, Computer eingeklappt, Handy.
+
+## Iteration 14 (2026-08-01): Zwischenablage raus, Seitenleiste in Arbeit
+
+- **Zwischenablage-Weg entfernt.** JB getestet: Der Kurzbefehl funktioniert über die Adresse (`webapp://jbplayer06.github.io/MovieView/#lat=…&lon=…`), iOS gibt die Zwischenablage in der Home-App aber nicht her. Damit ist der Notweg überflüssig und raus: Zeile «Standort aus Kurzbefehl», Knopf `#paste-loc`, CSS `.mini-btn`, Funktion `pasteCoordsFromClipboard()` und der Angebots-Dialog in `geoErrorDialog`. `parseCoords()` bleibt, die braucht der Adress-Weg. Damit sind noch zwei Wege da: Adresse und IP-Notnagel.
+- **Bestätigt:** Der `webapp://`-Trick reicht den Rautenteil samt Koordinaten durch. Das war die offene Frage aus It. 12b, sie ist mit Ja beantwortet. Möglich wurde das, weil im Manifest seit It. 10 keine `start_url` mehr steht.
+- **Tests:** test_it12.py auf 40 Checks erweitert, unter anderem Gegenproben, dass Knopf und Zeile wirklich weg sind und der Fehlerdialog kein «Einfügen» mehr anbietet.
+
+**In Arbeit, JB-Entscheide dazu stehen:** Die Seitenleiste soll randlos vom oberen bis zum unteren Fensterrand laufen statt als schwebende Karte mit 16 px Abstand, und die Genres sollen aus dem Kopfband in die Seitenleiste wandern. Die Schwelle von 900 px bleibt. Als Entscheidungsgrundlage liegt `seitenleiste-varianten.html` im Projektordner: 30 Varianten als Galerie, 1 bis 24 im Apple-Dark-Mode, 25 bis 30 Experimente, davon zwei mit «bricht das System» markiert (Kino-Rot, getönte Genre-Kacheln). Umschalter für Hell und Dunkel oben. JB wählt Nummern, gerne gemischt.
+
+## ACHTUNG Namenskollision: zwei Iterationen 12 (2026-08-01)
+
+Am selben Tag entstanden in zwei parallelen Cowork-Chats zwei verschiedene «Iteration 12», beide mit der Build-Nummer 12 beschriftet, beide von Build 11 abgezweigt:
+
+- **It. 12a «Desktop-Layout»** (der andere Chat, ging zuerst live): Tab-Bar wird ab 900 px Fensterbreite zur Mac-artigen Seitenleiste links (224 px, Punkte untereinander mit Symbol und Text, Indicator-Pille und Zieh-Geste pausieren per `isDesktop()`), Inhalt und Kopfband rücken daneben (max 1080 px), Sheets zentriert mit max 640 px, `#cinema-page` und `#cine-picker` werden zu schwebenden Panels statt Vollbild. Dazu eine Overpass-Serverkette (`OVERPASS_URLS` mit overpass-api.de, kumi.systems, private.coffee, je 12 s Zeitlimit, erst nach allen drei die Fehlermeldung) — JB hatte live ein 504 erwischt. Und der TMDB-Key wurde fest eingetragen.
+- **It. 12b «Kurzbefehl-Standort»** (dieser Chat): siehe Abschnitt unten.
+
+**Aufgelöst als Build 13** mit einem Drei-Wege-Merge (`git merge-file` gegen die gemeinsame Build-11-Basis, keine Konflikte, beide Seiten vollständig drin, 38 Checks grün, Screenshots Desktop und Handy geprüft).
+
+**Lehre für die Zukunft:** Vor jeder Iteration die Live-Datei von GitHub abrufen und mit dem Projektordner vergleichen, statt blind vom lokalen Stand auszugehen. Und die Build-Nummer allein ist kein Beweis, dass der richtige Code läuft — sie lässt sich verstellen und wurde hier von beiden Zweigen gleich vergeben. Verlässlicher ist eine sichtbare Neuerung: Bei Build 13 muss die Kino-Verwaltung unter «Standort» drei Zeilen zeigen.
+
+## Iteration 12b (2026-08-01): Standort per Kurzbefehl, IP-Notnagel
+
+JBs Idee, nachdem die Reihenfolge löschen → Safari freigeben → neu anlegen bei ihm NICHT griff: Kann ein iOS-Kurzbefehl den Standort holen und der App übergeben? Ja. Ein Kurzbefehl ist eine echte App mit echter GPS-Freigabe, er umgeht das WebKit-Problem komplett.
+
+JB-Entscheide dieser Runde: beide Übergabewege bauen, IP-Notnagel ja, Kurzbefehl ersetzt das App-Symbol auf dem Home-Bildschirm.
+
+- **Weg 1, Koordinaten in der Adresse:** `applyUrlCoords()` liest `lat`/`lon` oder die Kurzform `pos=lat,lon`, sowohl aus dem Frage- als auch aus dem Rautenteil. Läuft in `boot()` VOR dem ersten Zeichnen (sonst springt die Distanz sichtbar), zusätzlich an `hashchange` und `visibilitychange` gehängt: bringt iOS eine schon laufende Home-App nur nach vorne, lädt die Seite nicht neu. Danach räumt `history.replaceState` `lat`, `lon`, `pos` UND `key` aus der Adresse, sonst klebt beim nächsten Start eine Position von gestern drin. Grundlage: `webapp://`-Schema (iOS 16.4+) öffnet eine installierte Home-App wirklich als App statt in Safari. Ob iOS den Anhang dabei durchreicht, ist nicht garantiert (Discourse meldet verschluckte Pfade), darum Weg 2 als Netz.
+- **Weg 2, Zwischenablage:** neue Zeile «Standort aus Kurzbefehl» in der Kino-Verwaltung mit Knopf «Einfügen» (`#paste-loc`, Klasse `.mini-btn`). `pasteCoordsFromClipboard()` liest `navigator.clipboard.readText()`, `parseCoords()` zieht zwei Zahlen aus beliebigem Text (Punkt oder Komma als Dezimalzeichen) und prüft auf Plausibilität (±90/±180). Muss zwingend aus einem frischen Fingertipp laufen, sonst verweigert iOS das Lesen.
+- **Fehlerdialog bietet den Weg an:** `geoErrorDialog` ist neu ein `confirmDialog` mit «Einfügen». Umgesetzt über `geoErrorDialogInner(err, infoDialog)`, wo der Parameter absichtlich den globalen `infoDialog` überdeckt, damit alle vier bestehenden Fehlertexte unverändert in den Angebots-Dialog wandern. WARUM confirmDialog: nach einer bis zu 13 s langen Ortungs-Abfrage ist die ursprüngliche Geste verfallen, der Tipp auf «Einfügen» ist eine neue.
+- **Weg 3, IP-Notnagel:** `fetchNetPosition()` fragt ipwho.is, bei Ausfall ipapi.co (beide gratis, ohne Schlüssel, CORS offen, https). Läuft nur in `boot()` und nur wenn `refreshPosition` nichts geliefert hat, und überschreibt nie eine frische Position aus Ortung oder Kurzbefehl. Position wird mit `src: 'net'` gespeichert.
+- **Ehrliche Kennzeichnung:** `distanceReference()` gibt neu `approx: true` zurück, wenn die Position aus dem Netz kommt. Das Abzeichen an der Kino-Zeile heisst dann orange «netz» statt grün «auto». WARUM: Im Mobilfunknetz kann eine IP-Ortung Dutzende Kilometer danebenliegen, eine grüne «auto»-Distanz würde eine Genauigkeit vortäuschen, die nicht da ist.
+- **Diagnose-Zeile erweitert:** neu «Quelle: Ortung / Kurzbefehl / Internet (ungefähr)» und der Hand-Ort, falls gesetzt.
+- **Position speichern zentral:** `storePosition(lat, lon, src)` setzt die Position, löscht den Hand-Ort und schaltet die Ortung ein. `afterPositionChange()` zeichnet Kino-Verwaltung, Kino-Fenster und Diagnose neu.
+- **Verifikation:** neue test_it12.py mit 38 Checks grün, 0 JS-Fehler. Abgedeckt: beide Adress-Schreibweisen, Kurzform, unplausible Werte werden verworfen, Hand-Ort wird abgelöst, IP-Notnagel setzt und markiert, IP überschreibt Echtes nicht, IP-Ausfall crasht nicht, Zwischenablage mit gültigem und mit unbrauchbarem Inhalt, Diagnose-Quelle, Abzeichen netz/auto, Regression Ortung, Hand-Ort, `?key=`, Key plus Koordinaten gleichzeitig. Screenshots Kino-Verwaltung dunkel und hell. Hinweis: Die Suiten aus It. 1 bis 11 lagen nicht mehr im Projektordner, konnten also nicht mitlaufen. Die wichtigsten Pfade daraus sind in test_it12.py als Regressions-Checks nachgebaut.
+- **Offen:** Der Kurzbefehl selbst muss JB auf dem iPhone anlegen (Anleitung im Chat). Dafür braucht es die genaue GitHub-Pages-Adresse, die im Projekt weiterhin nicht dokumentiert ist.
+
+## Standort in der Home-App: Ursache gefunden (2026-08-01, Recherche)
+
+**Symptom bei JB (Build 11, Home-App):** Diagnose zeigt «Ortung an · Position keine · Freigabe laut System: granted». Standort-Knopf liefert trotzdem den Home-App-Dialog.
+
+**Ursache (belegt):** Auf iOS 26 bekommt eine Home-Bildschirm-Web-App einen EIGENEN, leeren Freigabe-Speicher, getrennt von Safari. iOS fragt in der Home-App nie nach (der Dialog kann dort nicht angezeigt werden), also bleibt die Freigabe für immer leer. `permissions.query` liest dagegen die SAFARI-Einstellung und meldet darum «granted», obwohl die Home-App selbst keine Freigabe hat. Die Diagnose-Zeile ist an dieser Stelle also irreführend, das ist kein Fehler der App.
+
+**Beleg:** Joseph Elfelt (Entwickler der PWA FindMeSAR), Mastodon 20.10.2025, identische Hardware iPhone 17 Pro mit iOS 26.0.1: als PWA «location denied», in Safari einwandfrei. Quelle: https://m.ai6yr.org/@mappingsupport/115407137741108174 · Ältere Grundlage: Apple-Entwicklerforum 751189 (permissions.query auf iOS unzuverlässig) und StackOverflow 70045532 (Dialog landet im falschen Fenster, Aufruf hängt stumm).
+
+**Lösung, die REIHENFOLGE ist das Ganze:**
+1. Home-App vom Bildschirm löschen (löscht deren Speicher mit).
+2. Einstellungen → Datenschutz & Sicherheit → Ortungsdienste → Safari-Websites auf «Beim Verwenden der App».
+3. Seite in SAFARI öffnen und die Standort-Abfrage dort wirklich auslösen und mit «Erlauben» quittieren, bis die Diagnose «Position da» zeigt.
+4. ERST DANN über Teilen → Zum Home-Bildschirm neu anlegen. Die frisch angelegte App erbt die Freigabe.
+
+Wer die App zuerst anlegt und danach in Safari freigibt, kommt nie zum Ziel.
+
+**Letzte Instanz, falls Schritt 1 bis 4 nicht greifen:** Einstellungen → Allgemein → iPhone übertragen oder zurücksetzen → Zurücksetzen → Standort & Datenschutz zurücksetzen. Setzt die Ortungs- und Datenschutz-Freigaben des ganzen iPhones auf Werk zurück (alle anderen Apps fragen danach nochmals). Elfelt brauchte genau diesen Schritt.
+
+**Nebenbefund:** Home-Bildschirm-Web-Apps tauchen in den iOS-Einstellungen NICHT in der App-Liste auf, es gibt also keinen eigenen Eintrag zum Nachjustieren.
+
+## Apple-Dark-Mode-Tokens (aus Designsystem)
+
+- bg: #000000, bg2: #1C1C1E, bg3: #2C2C2E · l1: #FFFFFF, l2: #A1A1A6, l3: #3A3A3C
+- Akzente: blue #0A84FF, green #30D158, orange #FF9F0A, red #FF453A
+- Glas: rgba(46,46,50,0.82) + blur(22)/saturate(170) (Token `--glass`)
+- Cards 16px, Sheets 22px, Pillen/Glas-Felder 999px
+- Font: -apple-system, BlinkMacSystemFont, SF Pro Display
+
+## Deploy-Ablauf (WICHTIG, Stand 2026-07-31)
+
+Die App läuft live auf GitHub Pages (JB: «movieview auf github», von dort per Safari
+auf den Home-Bildschirm gelegt). Das iPhone lädt also die GITHUB-Kopie, nicht die
+OneDrive-Datei. Nach jeder Iteration muss JB die neue `index.html` im GitHub-Repo
+ersetzen, sonst testet er auf dem Handy den alten Stand. GitHub Pages cached ~10
+Minuten; danach die Home-App einmal ganz schliessen und neu öffnen.
+
+**Seit It. 10 gehört `manifest.webmanifest` zum Lieferumfang** (start_url entfernt).
+Bei Änderungen daran also beide Dateien hochladen. Merksatz für die Zukunft: Solange
+im Manifest eine `start_url` steht, geht jeder Adress-Anhang beim Ablegen auf dem
+Home-Bildschirm verloren.
+
+## Offene Punkte
+
+- [x] GitHub Pages: läuft (JB 07-31, App von dort installiert)
+- [x] **GitHub-Pages-Adresse (JB 01.08.2026): `https://jbplayer06.github.io/MovieView/`** — von dort ist die Home-App installiert. Für Kurzbefehle lautet die App-Adresse `webapp://jbplayer06.github.io/MovieView/` (Schema seit iOS 16.4, öffnet die installierte Home-App statt Safari; muss buchstabengetreu stimmen, inklusive Schrägstrich am Schluss). Repo ist öffentlich, der fest eingetragene TMDB-Key ist damit für jeden lesbar; bei Missbrauch auf themoviedb.org neu generieren.
+- [ ] Standort in der Home-App: JB hat in Safari alles auf «Erlauben» gestellt (05.08.2026). Seit It. 25 ortet die App wieder selbst, der Kurzbefehl ist raus. **Offen: ob es auf seinem Gerät wirklich läuft.** Falls nicht, steht die belegte Reihenfolge im Abschnitt «Standort in der Home-App», letzte Instanz bleibt «Standort & Datenschutz zurücksetzen».
+- [ ] Nach dem Deploy prüfen: Manifest-Orientierung «any» greift erst nach dem Neu-Anlegen der Home-App
+- [ ] Eventuell zweite Sprache (it/fr) für mehrsprachige CH-Regionen – aktuell nur Deutsch
+
+## Änderungs-Log
+
+- **2026-08-05 (It. 25, Build 26):** «Ort von Hand» und der ganze Kurzbefehl-Weg aus der App entfernt, nachdem JB die Standort-Freigaben in Safari fest auf «Erlauben» gestellt hat. Die Ortung läuft wieder selbst, neu über `watchPosition` mit Genauigkeits-Wettrennen statt `getCurrentPosition` (das nahm auf iOS den ersten, oft kilometerweit danebenliegenden Wert). Genauigkeit wird gespeichert und angezeigt, Netz-Positionen laufen nach einer Stunde ab, beim Zurückkehren in die App wird aufgefrischt. Dazu Trailer im Breitformat: eigenes Vollbild-Fenster, das sich im Hochformat selbst um 90 Grad dreht, und Manifest-Orientierung auf «any». 221 Checks grün.
+- **2026-08-04 (It. 24, Build 25):** Kurzbefehl-Screenshot ausgewertet: doppeltes Schema (`webapp://https://`) und Adresse ohne Parameter, darum landete sie im Pfad. Fangnetz sucht die Postleitzahl jetzt im Pfad-, Frage- und Rautenteil, räumt den Pfad danach auf, und die Diagnose zeigt den Startlink. Damit läuft JBs Kurzbefehl unverändert. 232 Checks grün.
+- **2026-08-04 (It. 23, Build 24):** Ganze Link-Zeilen aus dem Kurzbefehl werden auf die reine Adresse eingedampft. Das Fadenkreuz ortet am iPhone zuerst selbst und bietet erst danach Kurzbefehl, Adresse von Hand oder die Erklärung an. Recherchiert und belegt: Kurzbefehle lassen sich nicht im Hintergrund starten, dafür ist die Home-App-Ortung nach «Standort & Datenschutz zurücksetzen» auf identischer Hardware nachweislich reparierbar. 225 Checks grün.
+- **2026-08-04 (It. 22, Build 23):** Adress-Weg repariert: mehrzeilige Kurzbefehl-Ausgaben werden geputzt, die Suche läuft mehrstufig bis hinunter zur Postleitzahl, Erfolg und Misserfolg werden ehrlich gemeldet statt still mit einer alten Position weiterzurechnen (JB sah 99 km nach Visp, gerechnet ab einer alten Lausanne-Position aus der IP-Ortung). Kurzbefehl-Aufruf ohne x-callback, Rückweg wieder über «URLs öffnen» im Kurzbefehl. Alte Netz-Position wird am iPhone verworfen. Neu «Adresse eingeben …» unter «Ort von Hand». Diagnose zeigt Koordinaten und letzte Adresse. 214 Checks grün.
+- **2026-08-04 (It. 21, Build 22):** Standort am iPhone läuft ausschliesslich über den Kurzbefehl, und der startet nur noch per Fadenkreuz (x-callback-Schema, Rücksprung über `webapp://`); der Kurzbefehl liefert neu die Adresse, die App schlägt die Koordinaten selbst nach. Schalter «Distanz ab Standort» bleibt an, auch wenn keine Position kommt. Kurzbefehl-Name «MovieView» im Code und in der Kino-Verwaltung änderbar. Haken beim Aktualisieren steht nicht mehr quer, «Details» links und «OK» rechts. 203 Checks in 3 Suiten grün. Gleiche Knopfgrösse (44 px) auch in Forma und in beiden Abfahrt-Dateien nachgezogen.
+- **2026-08-02 (It. 20, Build 21):** Schlagschatten an der linken Kante von Film-Spalte, Kino- und Ticket-Fenster entfernt (legte sich als schwarzer Verlauf über die Kacheln); die Haarlinie grenzt weiterhin ab. Mittige Panels behalten ihren Schatten. 185 Checks grün.
+- **2026-08-02 (It. 19, Build 20):** Alle runden Knöpfe auf Apples Standardmass 44 px gebracht (HIG belegt: Standard- und Mindest-Trefferfläche 44x44 pt, Staffel 28/32/44/52/64), Symbole darin proportional mitskaliert; Tab-Bar und Seitenleisten-Knopf bewusst ausgenommen. Tickets lassen sich per Tipp auf den Namen umbenennen (neuer Eingabe-Dialog im Hausstil). Bewertungs-Fenster lädt alle Kritiken und blendet sie über «Weitere Kommentare anzeigen» unter den ersten zwei ein. 181 Checks in 3 Suiten grün.
+- **2026-08-02 (It. 18, Build 19):** Kino-Vorschläge abgesichert (Schweizer Overpass-Server zuerst, Nominatim-Suche als letzte Rückfallebene; live waren alle drei bisherigen Server gleichzeitig down). Tickets: gestrichelte Fläche ersetzt den Plus-Knopf und ist auch am Handy da, Leermeldung und Ziehflächen-Text gekürzt, «Kinos verwalten» ohne Untertitel. Scrollbalken global ausgeblendet (weisse Windows-Regler). 160 Checks in 3 Suiten grün.
+- **2026-08-02 (It. 17, Build 18):** Website-Knopf mit 26-px-Favicon im weissen Kreis (beide Modi), X-Knöpfe im Stern-Knopf-Glas ohne Innenring, Seitenleisten-Genres ohne Schatten/Blur-Grauton, Genres im Film-Detail über den Watchlist-Knopf. Neu: Tickets zum Film («Tickets anzeigen» nur bei Watchlist-Filmen; Fotos/PDFs via Systemdialog oder Drag & Drop am Computer; Ablage pro Film in IndexedDB, überlebt Schliessen und Updates; Grossanzeige mit pdf.js und ehrlichem Offline-Fallback; Löschen mit Rückfrage). 154 Checks in 3 Suiten grün. Live auf GitHub lag zu Sessionbeginn noch Build 13 – JB muss index.html ersetzen.
+- **2026-05-20:** Projekt gestartet, Anforderungen geklärt, TMDB-Key beschafft, Architektur festgelegt.
+- **2026-07-02:** Kugel-Ansicht nach Vorbild phantom.land eingebaut, Responsive-Feinschliff, Kugel-Mathematik programmatisch verifiziert.
+- **2026-07-29 (It. 1):** Apple-Redesign mit Forma-Bausteinen: Liquid-Glass-Tab-Bar, schwarzer Bedien-Streifen (überholt durch It. 2), Schimmer-Kanten, X-Knöpfe, gezeichnete Icons, Einstellungs-Sheet + native Dialoge, Kugel-Politur. 4 Durchläufe bis 10/10, 23 Tests grün. Statusleisten-Meta auf `default`.
+- **2026-07-29 (It. 2):** Ansicht-Umschalter + Zahnrad in die Tab-Bar integriert (in It. 3 revidiert), Suche/Zeitraum/Genres als Glas-Felder im Tab-Bar-Stil und in der Kugel-Ansicht nach OBEN verlegt (Einklappen nach oben, Aufklapp-Knopf oben rechts), Kino-Verwaltung mit eigenen Kinos, Reihenfolge, wählbarer Sortierung und automatischer Distanz ab Standort (Geolocation mit Solothurn-Fallback, Städte-Tabelle statt Geocoding-Dienst). 49 Tests grün, Durchläufe 8 → 9.5 → 10/10. Vorher-Stand von heute Morgen steckt in der Chat-Datei und in OneDrive-Versionen; das Backup `index_vor-redesign_2026-07-29.html` (Stand vor dem gesamten Redesign) liegt weiter im Ordner.
+- **2026-07-29 (It. 3):** Auf JB-Feedback: Umschalter + Zahnrad aus der Tab-Bar in die Suchzeile (Bar wieder reine 3-Tab-Pille), X-Knöpfe im Hell-Modus invertiert (weisser Kreis, schwarzes X), Kino-Zeilen mit Drei-Striche-Griff per Drag & Drop verschiebbar (Verwaltung und Film-Sheet), «+ Kino hinzufügen» direkt im Sheet, Tap aufs Kino plant die Route in Apple/Google Maps (wählbar), Website über runden Knopf rechts. 46 Tests grün, Durchläufe 8.5 → 10/10.
+- **2026-07-29 (It. 4):** Genre-Weiter-Pfeil, gleitende und ziehbare Indicator-Pillen für alle Auswahlfelder, Kinoliste in eigenem Fenster mit «Kinos in der Nähe»-Knopf im Sheet, Kino-Zeile mit Globus- (Website) und Pin-Knopf (Route, zuhinterst), deutlichere Griffe, klickbare Sterne-Bewertung mit Detail-Sheet (Skala, Stimmen, Kritiken), Sprachfilter nach Originalsprache (in It. 5 entfernt), fette Kein-Trailer-Box mit Warn-Icon, YouTube-Hinweis entfernt, Kürzel «(DE)» statt «(Start DE)». 73 Checks in 3 Suiten grün, Durchläufe 8.5 → 10/10.
+- **2026-07-29 (It. 5):** Suchband klebt oben (Sticky-Bug via `overflow-x: clip` gefixt), Titel scrollt weg, Doppeltipp aufs Band springt nach oben, Sterne 1-5 mit halben Schritten überall, Bewertungs-Skala symmetrisch (3-Spalten-Raster) mit Schimmer, dynamischer Kino-Titel «Meine Kinos»/«Kinos in der Nähe» mit Top-3-Block bei aktivem Standort, Genre-Pfeil auch links, Sprachfilter entfernt (TMDB gibt Verfügbarkeit deutscher Fassungen nicht her), Halten-zum-Aktualisieren mit Apple-like Fortschrittsring (1 s Hinweis + 2 s Ring), Settings-Zeile umbenannt in «Aktualisieren». 102 Checks in 4 Suiten grün, Durchläufe 7.5 → 10/10.
+- **2026-07-29 (It. 6):** Watchlist-Knopf nach oben ins Sheet, Kugel-Raster mit Overscan (Poster laufen über alle Ränder, kein leerer Streifen mehr), Glasbalken hinter der Kugel-Suchzeile entfernt, Halte-Aktualisieren auch in der Kugel, Done-Haken mit Pop-Animation, blaue Auswahlfelder randlos (Pille füllt das Feld voll). 116 Checks in 5 Suiten grün, Durchläufe 8 → 10/10.
+- **2026-07-31 (It. 7):** Tab-Bar exakt auf Forma-Geometrie (Bodenabstand fix 19.75 px statt safe-area-Formel – sass auf dem iPhone ~14 px zu hoch –, Breite 292, Ico 25, Lücke 2), gesamter Kopf (Titel + Suche + Zeitraum + Genres) als fixes Band statt sticky (auf dem Gerät klebte sticky nicht; Titel klappt beim Scrollen per JS ein wie der iOS-Grosstitel, `--header-h` live gemessen), Standort-Meldungen differenziert (Datei-Öffnungs-Vermutung stellte sich in It. 8 als falsch heraus). 150 Checks in 6 Suiten grün (neu test_it7.py), Durchläufe 9 → 10/10.
+- **2026-07-31 (It. 8):** Adress-Geocoding für Kino-Distanzen (neues Adressfeld, Nominatim im Hintergrund, CH-Städte-Tabelle bleibt erste Wahl), Genre-Pfeile per Einstellungs-Schalter ausblendbar, Film-Beschreibung unter den Trailer verschoben, Home-App-Standortproblem aufgeklärt (App läuft BEREITS auf GitHub Pages; iOS kann den Standort-Fragedialog in Home-Bildschirm-Apps nicht anzeigen → standalone-Erkennung + Stoppuhr gegen stummes Hängen + Anleitung «Ortungsdienste → Safari-Websites → Beim Verwenden der App» direkt in der App). Deploy-Ablauf dokumentiert: iPhone nutzt die GitHub-Kopie, index.html muss dort nach jeder Iteration ersetzt werden. 200 Checks in 7 Suiten grün (neu test_it8.py), Durchlauf 9.5 → 10/10.
+- **2026-08-02 (It. 16, Build 17):** Favicon füllt den grauen Kreis ganz aus (beschnitten statt klein), «Kinos in der Nähe» legt sich über die Film-Spalte statt in die Bildschirmmitte, Einstellungen schweben frei in der Mitte wie in der Claude-Desktop-App, und ein Klick in den Filmbereich schliesst den ganzen Stapel statt nur die oberste Ebene. 76 plus 41 Checks grün.
+- **2026-08-02 (It. 15, Build 15):** Seitenleiste randlos mit Variante-20-Hintergrund, Genres samt Anzahl Filme aus dem Kopfband in die Leiste verschoben, Leiste auf 78 px einklappbar mit Drei-Buchstaben-Kürzeln. Film-Detail am Computer als ziehbare Spalte rechts über die volle Höhe. Favicon der Kino-Webseite statt Kugel. «Standard-Kinos wiederherstellen» raus, dafür eine Statuszeile zur Distanz-Berechnung; das «auto» an den einzelnen Kinos ist weg. «Ort von Hand» nur noch bei ausgeschalteter Ortung, Startwert «Aus», schöne schwebende Städteliste von A bis Z. Standortfehler neu kurz mit OK und Details. 58 plus 41 Checks grün.
+- **2026-08-01 (It. 14):** Zwischenablage-Weg für den Standort wieder entfernt (iOS gibt sie in der Home-App nicht her, JB getestet); der Adress-Weg über `webapp://` mit `#lat=&lon=` funktioniert bestätigt. 40 Checks grün. Dazu 30 Seitenleisten-Varianten als Galerie gebaut, Entscheid von JB steht aus.
+- **2026-08-01 (Build 13, Merge):** Die beiden parallel entstandenen «Iteration 12» (Desktop-Seitenleiste plus Overpass-Serverkette aus dem einen Chat, Kurzbefehl-Standort aus dem anderen) per Drei-Wege-Merge gegen die Build-11-Basis zusammengeführt, ohne Konflikte. Build-Nummer auf 13, damit die doppelte 12 nicht weiter für Verwirrung sorgt. 38 Checks grün, Screenshots Desktop 1280 und Handy 390 geprüft. Live-Stand ist ab jetzt vor jeder Iteration von GitHub abzurufen.
+- **2026-08-01 (It. 12b):** Standort per iOS-Kurzbefehl statt über die blockierte Ortung: Koordinaten kommen entweder in der Adresse (`#lat=&lon=`, geöffnet über `webapp://`) oder über die Zwischenablage (neue Zeile «Standort aus Kurzbefehl» mit Knopf «Einfügen»); Fehlerdialoge bieten das Einfügen direkt an. Dazu ein stiller IP-Notnagel (ipwho.is mit ipapi.co als Reserve), der nie eine echte Position überschreibt und dessen Distanzen mit einem orangen «netz»-Abzeichen statt dem grünen «auto» gekennzeichnet sind. Diagnose-Zeile nennt neu die Quelle der Position. 38 Checks in test_it12.py grün, 0 JS-Fehler.
+- **2026-08-01 (Recherche):** Ursache des Home-App-Standortproblems belegt gefunden: eigener leerer Freigabe-Speicher der Home-App auf iOS 26, `permissions.query` meldet trotzdem «granted», weil es die Safari-Einstellung liest. Lösung ist eine Reihenfolge (löschen → in Safari freigeben → dann erst anlegen), dokumentiert im eigenen Abschnitt. Ausserdem `DEFAULT_API_KEY` von JB fest in die Datei eingetragen, damit die Home-App den TMDB-Key ohne Eingabe hat.
+- **2026-08-01 (It. 11):** Deckende Fläche hinter der Tab-Bar (dark schwarz), «Kinos in der Nähe vorschlagen» im Formular (Overpass/OSM, füllt Felder + Koordinaten), Diagnose-Zeile mit Build-Nummer in den Einstellungen (klärt, welcher Stand auf dem iPhone läuft), «Ort von Hand»-Dropdown als Standort-Plan-B (Recherche: kein Browser-Ausweg, WebKit-Zwang; Ortung in Home-Apps teils trotz korrekter Einstellungen kaputt). 271 Checks in 10 Suiten grün (neu test_it11.py), 10/10 im ersten Anlauf.
+- **2026-07-31 (It. 10):** Ursache für den nicht funktionierenden `?key=`-Anhang gefunden und behoben (`start_url` im Manifest überschrieb beim Ablegen auf dem Home-Bildschirm die Adresse; jetzt entfernt, `#key=` als zweiter Weg ergänzt), Schalter «Pfeilsteuerung» statt «Genre-Pfeile», Kinos ab Werk nach Distanz sortiert (Film-Sheet zeigt sofort die nächsten), Standort-Aktualisieren-Knopf mit Dreh-Animation im Kino-Fenster des Films (Fehlerdialoge neu in gemeinsamer Funktion). Ab jetzt gehört manifest.webmanifest zum Lieferumfang. 238 Checks in 9 Suiten grün (neu test_it10.py), Durchlauf 9.5 → 10/10.
+- **2026-07-31 (It. 9):** Standort ab Werk AN (inkl. Positions-Abruf beim Start), API-Key ohne Neueingabe (URL-Parameter `?key=` – überlebt das Anlegen als Home-App – plus optionale Code-Konstante `DEFAULT_API_KEY`), neues Kachelwand-Icon für den Kugel-Umschalter (Globus bleibt den Website-Knöpfen). Ursachen von JBs Symptomen dokumentiert: «Beim nächsten Mal fragen» erzwingt die ewige Standort-Fragerei, und die Home-App hat einen eigenen leeren Speicher (darum Key/Schalter weg). 212 Checks in 8 Suiten grün (neu test_it9.py; Alt-Suiten auf explizit 'off' gepinnt), Durchlauf 9 → 10/10.
