@@ -159,52 +159,15 @@ JB-Feedback mit 5 Screenshots. Umgesetzt:
 - **Ort von Hand (Plan B fürs Standort-Elend):** Recherche-Fazit: Home-Bildschirm-Web-Apps laufen IMMER über WebKit und die Safari-Freigaben, egal über welchen Browser abgelegt (ein anderer Browser hilft NICHT); es gibt dokumentierte Fälle (Apple-Entwicklerforum), wo die Ortung in der Home-App trotz komplett korrekter Einstellungen Code 1 liefert. Darum neues Dropdown «Ort von Hand» in der Kino-Verwaltung (49 Städte aus CITY_COORDS, Alias-Duplikate raus, längster Name gewinnt, Key `kinofilme_v1_manualcity`). Rangfolge der Distanz-Referenz: Hand-Ort > Live-Standort > Solothurn; Hand-Ort zählt als «live» (Top-3 + «Kinos in der Nähe»). Der Standort-Knopf im Kino-Fenster löscht den Hand-Ort bei ERFOLG (echter Standort übernimmt). Der Home-App-Dialog verweist neu auf diesen Ausweg.
 - **Verifikation:** 10 Suiten grün (271 Checks, neu test_it11.py mit 33), 0 JS-Fehler, Screens: schwarze Rückwand, Vorschlagsliste, gefülltes Formular, Ort-von-Hand-Zeile. Durchlauf 10/10 im ersten Anlauf.
 
-## Iteration 25 (2026-08-05, Build 26): Standort neu gebaut, Trailer im Breitformat
+## Iteration 25 (2026-08-08, Build 26): App-Icon ohne weissen Rand
 
-**JBs Auftrag:** «Ort von Hand» und den Kurzbefehl aus der App nehmen und stattdessen einbauen, was am stabilsten ortet. Auslöser: Er hat in Safari alle Standort-Freigaben fest auf «Erlauben» gestellt. Dazu der Wunsch, Trailer nicht nur hochkant, sondern im Breitformat anschauen zu können.
+- **Die weisse Umrandung stammte aus den Icon-Dateien selbst.** Die abgerundete grüne Kachel sass auf einem weissen Quadrat, darum blitzten am Laptop im Browser-Tab die weissen Ecken durch.
+- **Ecken freigestellt statt einfach «alles Weisse weg».** Ein Flächenfüller läuft von den vier Ecken nach innen und macht nur den ZUSAMMENHÄNGENDEN hellen Aussenbereich durchsichtig. Wichtig, weil im Motiv selbst cremefarbene Streifen auf der Filmklappe sind; ein pauschales Entfernen aller hellen Pixel hätte die mitgelöscht. Die Übergangspixel an der Rundung bekommen ein anteiliges Alpha, damit die Kante weich bleibt und keine Treppe entsteht.
+- **Betroffen:** `favicon.png`, `icon-192.png`, `icon-512.png` sind jetzt durchsichtig.
+- **`icon-180.png` (Apple-Touch-Icon) bewusst NICHT durchsichtig**, sondern die weissen Ecken auf die Kachelfarbe (#018E8C) gesetzt. Grund: iOS zeigt Transparenz in Home-Bildschirm-Icons als Schwarz und rundet die Ecken selbst ab, ein freigestelltes Icon bekäme dort also schwarze Zipfel.
+- **Cache-Buster `?v=2`** an den Icon-Verweisen im HTML, sonst zeigt der Browser hartnäckig das alte Bild aus seinem Speicher.
 
-**Vorgeschaltete Recherche (5 Subagenten, Bericht in `OUTPUT/Standort_in_PWA_5_Wege.md`).** Zwei Befunde bestimmen diese Runde:
-1. Der Fehler «Standalone-PWA fragt nie nach dem Standort» stammt aus iOS 15 (2021/22). Seit Jahren gibt es keine neuen Meldungen mehr, und Apple führt den Standort selbst in der Liste der Systemabfragen für Home-Bildschirm-Web-Apps (WWDC23). Die Annahme, es gehe grundsätzlich nicht, ist überholt.
-2. Der Kurzbefehl-Weg über die Adresse war ohnehin auf Sand gebaut: iOS kennt kein Link-Capturing, `https://` öffnet Safari statt der App, und `webapp://` verwirft Pfad, Parameter und Rautenteil und lädt immer die `start_url` (belegt über PairDrop-Issue 379 und einen Discourse-Bericht vom 21.07.2025). Was bei JB funktionierte, funktionierte nur wegen des Fangnetzes aus It. 24.
-
-### Was raus ist
-
-- **«Ort von Hand»** samt Städte-Auswahl, `cityOptions()`, `cityLabel()`, Speicher-Schlüssel `kinofilme_v1_manualcity` und dem Zweig `ref.manual` in `distanceReference()`.
-- **Der ganze Kurzbefehl-Weg:** `runLocationShortcut()`, `applyUrlCoords()` samt Fangnetz, `handleIncomingAddress()`, `cleanAddress()`, `addressQueries()`, `geocodeAddress()`, `askAddressAndLocate()`, `isApplePhone()`, `DEFAULT_SHORTCUT`, Schlüssel `kinofilme_v1_shortcut`, die Kurzbefehl-Zeile in der Kino-Verwaltung und das Auswahl-Menü am Fadenkreuz.
-- Die alten Speicher-Einträge bleiben harmlos in localStorage liegen, sie werden nirgends mehr gelesen.
-- `listDialog()` ist damit vorerst ungenutzt, bleibt aber als Baustein stehen.
-
-### Was neu ist: `refreshPosition()` mit Genauigkeits-Wettrennen
-
-Der Kern der Runde, und der Grund, warum die Distanzen vorher «fast stimmten»: iOS antwortet auf `getCurrentPosition` oft mit dem erstbesten Wert aus Funkzelle oder WLAN, der gerne 1000 bis 3000 Meter danebenliegt, und schiebt den genauen GPS-Wert erst Sekunden später nach. `getCurrentPosition` nimmt den nicht mehr entgegen, es ist ja fertig.
-
-Neu läuft es über `watchPosition`:
-- jeder eingehende Wert wird am mitgelieferten Genauigkeitswert gemessen, der beste gewinnt
-- unter `GOOD_ACC_M` (100 m) ist sofort Schluss
-- nach `SOFT_MS` (7 s) gilt, was da ist
-- nach `HARD_MS` (16 s) ist die Abfrage gescheitert. Das fängt auch den Fall, in dem iOS gar nichts meldet, weder Erfolg noch Fehler
-- die Genauigkeit wird mitgespeichert (`acc` in `kinofilme_v1_lastpos`), steht in der Diagnose-Zeile und in der Meldung nach dem Fadenkreuz («Standort aktualisiert (auf 18 m genau)»)
-- `posBusy` verhindert zwei Abfragen gleichzeitig
-
-Dazu:
-- **Ortung läuft wieder auf allen Geräten**, auch am iPhone. Der Sonderweg aus It. 21 ist weg.
-- **Auffrischen beim Zurückkehren:** `visibilitychange` holt die Position neu, wenn sie älter als 10 Minuten ist. iOS lädt eine Home-Bildschirm-App beim Zurückholen oft nicht neu, das ist also die einzige Gelegenheit dazu.
-- **Netz-Position läuft nach einer Stunde ab** (`NET_POS_MAX_AGE_MS`). Genau daran ist It. 22 gescheitert: eine alte IP-Position (Lausanne) lag im Speicher und lieferte still falsche Distanzen, während JB im Wallis stand. Eine echte Ortung wird ausserdem nie mehr durch eine geschätzte ersetzt, egal wie alt sie ist.
-- **Fehlerdialoge neu sortiert:** `kein-https`, `laeuft`, Code 1 (Freigabe fehlt, mit dem genauen Weg durch die iPhone-Einstellungen inklusive «Genauer Standort»), `stumm` in der Home-App (mit der belegten Reihenfolge zum Zurücksetzen der Ortungsfreigaben), Code 3 und der Rest. Der Fall `nur-kurzbefehl` ist weg.
-
-### Trailer im Breitformat (It. 25b)
-
-- **Manifest:** `"orientation"` von `portrait` auf `any`. Die Home-App war auf Hochquerformat festgenagelt, drehen half also gar nichts. **JB muss `manifest.webmanifest` mit hochladen, und die Wirkung kommt erst nach dem Neu-Anlegen der Home-App.**
-- **Eigenes Breitbild-Fenster** (`#trailer-full`), erreichbar über den neuen Knopf «Breitbild» im Trailer-Kopf. Warum selbst gebaut: Auf iOS lässt sich ein eingebettetes YouTube-Video nicht über die Vollbild-Funktion des Browsers aufziehen, die gibt es dort nur für echte Video-Elemente.
-- **Dreht sich selbst:** Wird das Telefon hochkant gehalten, kippt `fitTrailerFull()` den Spieler per `rotate(90deg)` und rechnet die Grösse so, dass 16:9 gewahrt bleibt und die kurze Bildschirmseite voll ausgenutzt wird. Wird das Gerät physisch gedreht, fällt die Drehung von selbst weg (`resize` und `orientationchange`).
-- **`playsinline=1` ist Pflicht**, sonst reisst iOS das Video in seinen eigenen Spieler und das Fenster wäre sinnlos. Dazu `autoplay=1`, und der kleine Spieler im Sheet wird angehalten, damit nicht zwei gleichzeitig laufen.
-- **Schliessen:** X oben links, Tipp auf den schwarzen Rand, Escape am Computer. Beim Schliessen wird der Rahmen geleert, das hält das Video an.
-- **Stolperstein, im Testlauf gefunden:** X-Knopf und Hinweis lagen zuerst NEBEN dem Fenster. Am Computer geht das Fenster ins echte Vollbild, und dabei zeigt der Browser nur noch dieses eine Element samt Inhalt an, der Knopf war also weg. Beide liegen jetzt innerhalb.
-- Zweiter Stolperstein: `.x-btn` setzt `display: flex` und überstimmt damit das `hidden`-Attribut. Der unsichtbare Knopf fing Tipps ab, die der Seite darunter galten. Gelöst, indem beide Elemente im Fenster liegen, das sich als Ganzes ausblendet.
-
-**Verifikation:** 221 Checks grün in 4 Suiten, 0 JS-Fehler. Neu `test_it25.py` mit 50 Checks (Ortung beim Start, Quelle und Genauigkeit im Speicher, Wettrennen grob gegen genau mit gefälschtem `watchPosition`, `getCurrentPosition` wird nachweislich nicht mehr benutzt, Fadenkreuz, Schalter bleibt ohne Freigabe an, alte und frische Netz-Position, Reste-Suche im Quelltext, Adresse im Link wirkungslos, Breitbild-Fenster in Hoch- und Querformat). `test_it18.py` auf 72, `test_it15.py` auf 69, `test_it12.py` auf 30 zurechtgestutzt: alle Checks zu Kurzbefehl, Hand-Ort und Link-Koordinaten sind entfernt, weil sie Funktionen prüften, die es nicht mehr gibt.
-
-**JB muss dazu:** `index.html` UND `manifest.webmanifest` im GitHub-Repo ersetzen, danach die Home-App löschen und neu anlegen (sonst greift die Orientierungs-Änderung nicht). Der Kurzbefehl «MovieView» wird nicht mehr gebraucht.
+**Verifikation:** Vergleichsbild auf kariertem Grund geprüft (alt mit weissem Quadrat, neu freigestellt, Motiv unversehrt, Kanten sauber). 232 Checks in drei Suiten grün.
 
 ## Iteration 24 (2026-08-04, Build 25): Fangnetz für den Kurzbefehl-Link
 
@@ -438,13 +401,12 @@ Home-Bildschirm verloren.
 
 - [x] GitHub Pages: läuft (JB 07-31, App von dort installiert)
 - [x] **GitHub-Pages-Adresse (JB 01.08.2026): `https://jbplayer06.github.io/MovieView/`** — von dort ist die Home-App installiert. Für Kurzbefehle lautet die App-Adresse `webapp://jbplayer06.github.io/MovieView/` (Schema seit iOS 16.4, öffnet die installierte Home-App statt Safari; muss buchstabengetreu stimmen, inklusive Schrägstrich am Schluss). Repo ist öffentlich, der fest eingetragene TMDB-Key ist damit für jeden lesbar; bei Missbrauch auf themoviedb.org neu generieren.
-- [ ] Standort in der Home-App: JB hat in Safari alles auf «Erlauben» gestellt (05.08.2026). Seit It. 25 ortet die App wieder selbst, der Kurzbefehl ist raus. **Offen: ob es auf seinem Gerät wirklich läuft.** Falls nicht, steht die belegte Reihenfolge im Abschnitt «Standort in der Home-App», letzte Instanz bleibt «Standort & Datenschutz zurücksetzen».
-- [ ] Nach dem Deploy prüfen: Manifest-Orientierung «any» greift erst nach dem Neu-Anlegen der Home-App
+- [ ] Standort in der Home-App: Ursache seit 08-01 geklärt (eigener leerer Freigabe-Speicher, siehe Abschnitt «Standort in der Home-App»). JB testet die Reihenfolge löschen → Safari freigeben → neu anlegen. Ergebnis hier nachtragen.
 - [ ] Eventuell zweite Sprache (it/fr) für mehrsprachige CH-Regionen – aktuell nur Deutsch
 
 ## Änderungs-Log
 
-- **2026-08-05 (It. 25, Build 26):** «Ort von Hand» und der ganze Kurzbefehl-Weg aus der App entfernt, nachdem JB die Standort-Freigaben in Safari fest auf «Erlauben» gestellt hat. Die Ortung läuft wieder selbst, neu über `watchPosition` mit Genauigkeits-Wettrennen statt `getCurrentPosition` (das nahm auf iOS den ersten, oft kilometerweit danebenliegenden Wert). Genauigkeit wird gespeichert und angezeigt, Netz-Positionen laufen nach einer Stunde ab, beim Zurückkehren in die App wird aufgefrischt. Dazu Trailer im Breitformat: eigenes Vollbild-Fenster, das sich im Hochformat selbst um 90 Grad dreht, und Manifest-Orientierung auf «any». 221 Checks grün.
+- **2026-08-08 (It. 25, Build 26):** App-Icons freigestellt: weisse Ecken bei favicon, icon-192 und icon-512 durchsichtig (Flächenfüller von den Ecken, damit die hellen Streifen im Motiv bleiben), icon-180 für iOS stattdessen auf Kachelfarbe gefüllt, weil Apple Transparenz dort schwarz zeigt. Cache-Buster `?v=2` gesetzt. **Beim Deploy gehören neu auch die vier PNG-Dateien ins Repo.**
 - **2026-08-04 (It. 24, Build 25):** Kurzbefehl-Screenshot ausgewertet: doppeltes Schema (`webapp://https://`) und Adresse ohne Parameter, darum landete sie im Pfad. Fangnetz sucht die Postleitzahl jetzt im Pfad-, Frage- und Rautenteil, räumt den Pfad danach auf, und die Diagnose zeigt den Startlink. Damit läuft JBs Kurzbefehl unverändert. 232 Checks grün.
 - **2026-08-04 (It. 23, Build 24):** Ganze Link-Zeilen aus dem Kurzbefehl werden auf die reine Adresse eingedampft. Das Fadenkreuz ortet am iPhone zuerst selbst und bietet erst danach Kurzbefehl, Adresse von Hand oder die Erklärung an. Recherchiert und belegt: Kurzbefehle lassen sich nicht im Hintergrund starten, dafür ist die Home-App-Ortung nach «Standort & Datenschutz zurücksetzen» auf identischer Hardware nachweislich reparierbar. 225 Checks grün.
 - **2026-08-04 (It. 22, Build 23):** Adress-Weg repariert: mehrzeilige Kurzbefehl-Ausgaben werden geputzt, die Suche läuft mehrstufig bis hinunter zur Postleitzahl, Erfolg und Misserfolg werden ehrlich gemeldet statt still mit einer alten Position weiterzurechnen (JB sah 99 km nach Visp, gerechnet ab einer alten Lausanne-Position aus der IP-Ortung). Kurzbefehl-Aufruf ohne x-callback, Rückweg wieder über «URLs öffnen» im Kurzbefehl. Alte Netz-Position wird am iPhone verworfen. Neu «Adresse eingeben …» unter «Ort von Hand». Diagnose zeigt Koordinaten und letzte Adresse. 214 Checks grün.

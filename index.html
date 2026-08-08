@@ -19,9 +19,9 @@
 <meta name="application-name" content="MovieView">
 
 <!-- Icons -->
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" href="favicon.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 
 <title>MovieView</title>
@@ -454,48 +454,6 @@ body.light .x-btn {
   background: var(--bg3); border-radius: 12px; overflow: hidden; margin: 0 0 8px;
 }
 .trailer-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-/* Zwei Knoepfe rechts im Trailer-Kopf: Breitbild und YouTube */
-.trailer-actions { display: inline-flex; align-items: center; gap: 6px; }
-
-/* ---------- TRAILER IM BREITFORMAT (It. 25b) ----------
-   iOS kennt die Vollbild-Funktion des Browsers fuer eingebettete Videos
-   nicht, und in einer Home-Bildschirm-App gibt es keine Adressleiste, die
-   man wegdrehen koennte. Darum ein eigenes Fenster ueber allem: Es deckt
-   den ganzen Bildschirm ab, und solange das Telefon hochkant gehalten
-   wird, DREHEN wir den Spieler um 90 Grad. Dann fuellt das Bild den
-   Bildschirm quer, ohne dass JB das Geraet drehen muss. Dreht er es
-   trotzdem, faellt die Drehung von selbst weg (siehe fitTrailerFull). */
-#trailer-full {
-  position: fixed; inset: 0; z-index: 300;
-  background: #000; display: none;
-  align-items: center; justify-content: center;
-  overscroll-behavior: none;
-}
-#trailer-full.show { display: flex; }
-#trailer-full .tf-stage {
-  position: relative; background: #000;
-  transform-origin: center center;
-}
-#trailer-full iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-/* Der X-Knopf bleibt IMMER am Bildschirmrand, er wird bewusst nicht
-   mitgedreht: sonst haenge er je nach Lage irgendwo in der Luft. */
-#tf-close {
-  position: absolute; z-index: 302;
-  top: calc(env(safe-area-inset-top, 0px) + 14px);
-  left: calc(env(safe-area-inset-left, 0px) + 14px);
-}
-/* Hinweis, dass sich das Bild von selbst dreht – blendet nach 3 s aus */
-#tf-hint {
-  position: absolute; z-index: 302; left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-  background: rgba(28,28,30,0.82); color: #fff;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
-  padding: 8px 14px; border-radius: var(--r-pill);
-  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  opacity: 1; transition: opacity 0.45s ease; pointer-events: none;
-}
-#tf-hint.gone { opacity: 0; }
-
 /* «Kein Trailer»: gerundete Box, fett, mit Warn-Symbol – klar sichtbar */
 .no-trailer {
   display: flex; align-items: center; gap: 9px;
@@ -1736,12 +1694,23 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       <span class="li-main"><b>Distanz ab Standort</b><span>Berechnet Distanzen automatisch neu</span></span>
       <button id="geo-switch" class="switch" role="switch" aria-checked="false" aria-label="Distanz ab Standort"></button>
     </div>
-    <p class="cine-hint">Die App holt den Standort selbst: beim Start, beim Rückkehren in die App
-    und auf Knopfdruck über das Fadenkreuz im Fenster «Kinos in der Nähe». Sie wartet dabei
-    bewusst ein paar Sekunden auf den genauen Wert, statt den ersten groben zu nehmen.
-    Schweizer Städte werden automatisch erkannt; mit Adresse wird die Distanz aufs Haus genau
-    nachgeschlagen (OpenStreetMap). Kinos ohne bekannten Ort zeigen ihre von Hand gesetzte
-    Distanz. Solange keine Position bekannt ist, wird ab Solothurn gerechnet.</p>
+    <div class="li-row" id="manual-row" style="margin-bottom: 6px;">
+      <span class="li-ico gray" data-liicon="pin"></span>
+      <span class="li-main"><b>Ort von Hand</b><span>Eigenen Standort bestimmen</span></span>
+      <button id="manual-city" class="city-select" aria-haspopup="listbox">Aus</button>
+    </div>
+    <!-- It. 21: Auf dem iPhone laeuft die Ortung nur noch ueber den
+         Kurzbefehl. Der Name muss dem in der Kurzbefehle-App entsprechen. -->
+    <div class="li-row" id="shortcut-row" style="margin-bottom: 6px;">
+      <span class="li-ico gray" data-liicon="locate"></span>
+      <span class="li-main"><b>Kurzbefehl</b><span>Name in der Kurzbefehle-App</span></span>
+      <button id="shortcut-name" class="city-select">MovieView</button>
+    </div>
+    <p class="cine-hint">Schweizer Städte werden automatisch erkannt; mit Adresse wird die Distanz
+    aufs Haus genau nachgeschlagen (OpenStreetMap). Kinos ohne bekannten Ort zeigen ihre von Hand
+    gesetzte Distanz. Auf dem iPhone holst du deinen Standort über das Fadenkreuz im Fenster
+    «Kinos in der Nähe»; dort startet der Kurzbefehl. Solange keine Position bekannt ist, wird ab
+    Solothurn gerechnet – oder ab dem von Hand gewählten Ort.</p>
     <div class="set-cap">Karten-App für Routen</div>
     <div class="seg2" id="maps-seg" role="group" aria-label="Karten-App">
       <button data-maps="apple">Apple Maps</button>
@@ -1764,17 +1733,6 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
   <div class="fp-body">
     <div id="picker-list"></div>
   </div>
-</div>
-
-<!-- Trailer im Breitformat (It. 25b) -->
-<div id="trailer-full" aria-label="Trailer im Breitformat">
-  <div class="tf-stage" id="tf-stage"></div>
-  <!-- Knopf und Hinweis liegen INNERHALB des Fensters. Grund: Am Computer
-       geht das Fenster ins echte Vollbild, und dabei zeigt der Browser nur
-       noch dieses eine Element samt Inhalt an. Alles daneben waere weg,
-       auch der Schliessen-Knopf. -->
-  <button id="tf-close" class="x-btn" aria-label="Breitbild schliessen"></button>
-  <div id="tf-hint">Zum Beenden aufs X oder auf den schwarzen Rand tippen</div>
 </div>
 
 <!-- Tickets zum Film (It. 17): nur bei Watchlist-Filmen erreichbar -->
@@ -1879,17 +1837,18 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     geoloc:     'kinofilme_v1_geoloc',
     lastPos:    'kinofilme_v1_lastpos',
     mapsApp:    'kinofilme_v1_mapsapp',
-    genreArrows: 'kinofilme_v1_genrearrows'
+    genreArrows: 'kinofilme_v1_genrearrows',
+    manualCity: 'kinofilme_v1_manualcity',
+    shortcut:   'kinofilme_v1_shortcut'
   };
-  // It. 25 (JB 05.08.2026): «Ort von Hand» und der Kurzbefehl-Weg sind raus.
-  // JB hat die Standort-Freigaben in Safari auf «Erlauben» gestellt, damit
-  // ortet die App wieder selbst. Die alten Speicher-Einträge
-  // (kinofilme_v1_manualcity, kinofilme_v1_shortcut) bleiben harmlos liegen
-  // und werden nirgends mehr gelesen.
+  // Name des iOS-Kurzbefehls, der den Standort holt (JB 08-04). Steht als
+  // Standard hier im Code und laesst sich in der Kino-Verwaltung aendern,
+  // falls JB den Kurzbefehl einmal umbenennt.
+  const DEFAULT_SHORTCUT = 'MovieView';
   // Sichtbare Build-Nummer: steht in den Einstellungen unter Info. Damit
   // laesst sich auf dem iPhone sofort pruefen, ob GitHub schon den neuen
   // Stand ausliefert oder noch einen alten aus dem Zwischenspeicher.
-  const APP_BUILD = 'Build 26 (05.08.2026)';
+  const APP_BUILD = 'Build 26 (08.08.2026)';
   const TMDB_BASE = 'https://api.themoviedb.org/3';
   const IMG_BASE  = 'https://image.tmdb.org/t/p/w500';
   const LANG      = 'de-DE';
@@ -1979,8 +1938,6 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       chevup:   '<path d="M5.6 14.6 L12 8.4 L18.4 14.6"/>',
       search:   '<circle cx="10.6" cy="10.6" r="6"/><path d="M15.3 15.3 L20 20"/>',
       arrowout: '<path d="M7.5 16.5 L16.5 7.5 M9.5 7.5 H16.5 V14.5"/>',
-      /* Breitbild (It. 25b): vier Ecken, die nach aussen zeigen */
-      expand:   '<path d="M9.2 4.6 H4.6 V9.2 M14.8 4.6 H19.4 V9.2 M9.2 19.4 H4.6 V14.8 M14.8 19.4 H19.4 V14.8"/>',
       star:     '<path d="M12 4 L14.5 9 L20 9.8 L16 13.7 L17 19.2 L12 16.6 L7 19.2 L8 13.7 L4 9.8 L9.5 9 Z"/>',
       film:     '<rect x="3.8" y="5.2" width="16.4" height="13.6" rx="3"/><path d="M3.8 9.4 H20.2 M9.2 5.2 V9.4 M14.8 5.2 V9.4"/>',
       video:    '<rect x="3.6" y="5" width="16.8" height="14" rx="3.4"/><path d="M10.3 9.3 L14.7 12 L10.3 14.7 Z" fill="currentColor"/>',
@@ -2080,7 +2037,6 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     document.getElementById('rating-close').innerHTML = svgStroke('x', 20, 3.8);
     document.getElementById('ticket-close').innerHTML = svgStroke('x', 20, 3.8);
     document.getElementById('ticket-view-close').innerHTML = svgStroke('x', 20, 3.8);
-    document.getElementById('tf-close').innerHTML = svgStroke('x', 20, 3.8);
     document.getElementById('genre-next').innerHTML = svgStroke('chevright', 19, 2.6);
     document.getElementById('genre-prev').innerHTML = svgStroke('chevleft', 19, 2.6);
     document.getElementById('hr-ico').innerHTML = svgStroke('refresh', 20, 2.2);
@@ -2091,6 +2047,24 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       el.innerHTML = svgStroke(el.dataset.liicon, 17, 2.4);
     });
   }
+
+  // Staedte fuer «Ort von Hand»: eine Zeile pro Ort aus der eingebauten
+  // Tabelle, Aliasse mit gleichen Koordinaten nur einmal (der laengste Name
+  // gewinnt, z.B. «Biel/Bienne»), sortiert von A bis Z.
+  function cityOptions() {
+    const byCoord = {};
+    Object.entries(CITY_COORDS).forEach(([name, c]) => {
+      const k = c[0].toFixed(3) + ',' + c[1].toFixed(3);
+      if (!byCoord[k] || name.length > byCoord[k].length) byCoord[k] = name;
+    });
+    const cap = t => t.replace(/(^|[\s\-\/.])(\p{L})/gu, (m, pre, ch) => pre + ch.toUpperCase());
+    return Object.values(byCoord)
+      .sort((a, b) => a.localeCompare(b, 'de'))
+      .map(n => ({ value: n, label: cap(n) }));
+  }
+  const cityLabel = n => n
+    ? n.replace(/(^|[\s\-\/.])(\p{L})/gu, (m, pre, ch) => pre + ch.toUpperCase())
+    : 'Aus';
 
   // ---------- STORAGE ----------
   const loadKey    = () => localStorage.getItem(STORAGE_KEYS.apiKey);
@@ -2183,40 +2157,155 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
 
   const POS_TTL_MS = 10 * 60 * 1000; // Standort gilt 10 Minuten, dann leise neu holen
 
-  // ---------- STANDORT (It. 25) ----------
-  // Vorgeschichte in Kurzform: Von It. 12 bis It. 24 lief die Ortung auf dem
-  // iPhone ueber einen Kurzbefehl, weil iOS in einer Home-Bildschirm-App die
-  // «Erlauben?»-Nachfrage nicht anzeigen konnte und die Abfrage darum stumm
-  // haengen blieb. JB hat die Freigabe in Safari inzwischen fest auf
-  // «Erlauben» gestellt; damit faellt die Nachfrage weg und die eingebaute
-  // Ortung ist wieder der direkte Weg. Kurzbefehl, Adress-Weg und «Ort von
-  // Hand» sind darum raus (It. 25).
-  //
-  // Was bleibt, in dieser Reihenfolge:
-  //   1. die eingebaute Ortung des Browsers (GPS), in der robusten Bauform
-  //      weiter unten bei refreshPosition
-  //   2. die zuletzt bekannte Position, falls gerade keine frische kommt
-  //   3. grobe Ortung ueber die Internetverbindung, nur als Notnagel und
-  //      ehrlich als «netz» ausgewiesen
-  //   4. Solothurn, wenn es noch nie eine Position gab
+  // ---------- STANDORT OHNE ORTUNGS-FREIGABE (It. 12) ----------
+  // Hintergrund: Auf iOS 26 bekommt eine Home-Bildschirm-App einen eigenen,
+  // leeren Freigabe-Speicher. iOS kann dort den «Erlauben?»-Dialog nicht
+  // zeigen, also bleibt er leer und die Ortung ist dauerhaft blockiert –
+  // unabhaengig davon, was in Safari erlaubt ist. Belegt u.a. vom Entwickler
+  // der PWA FindMeSAR auf identischer Hardware (iPhone 17 Pro, iOS 26.0.1).
+  // Darum zwei Ersatzwege, in dieser Reihenfolge der Genauigkeit:
+  //   1. Kurzbefehl haengt die Koordinaten an die Adresse (#lat=&lon=)
+  //   2. grobe Ortung ueber die Internetverbindung (stiller Notnagel)
+  // Ein dritter Weg ueber die Zwischenablage war in It. 12b eingebaut und
+  // wurde in It. 14 wieder entfernt: iOS gibt die Zwischenablage in der
+  // Home-App nicht her (JB getestet), und der Adress-Weg funktioniert.
+  // Ein Kurzbefehl ist eine echte App und hat darum eine echte GPS-Freigabe,
+  // er umgeht das WebKit-Problem also komplett.
 
-  // Woher die gespeicherte Position stammt – fuer die Diagnose-Zeile und das
-  // Abzeichen an der Kino-Zeile, damit JB einer Distanz ansieht, wie
+  // Woher die gespeicherte Position stammt – nur fuer die Diagnose-Zeile
+  // und den Hinweis «ungefaehr», damit JB einer Distanz ansieht, wie
   // verlaesslich sie ist.
-  const POS_SRC_LABEL = { gps: 'Ortung', net: 'Internet (ungefähr)' };
-  // Eine grobe Netz-Position darf hoechstens so alt sein, sonst wird sie
-  // ignoriert. Grund: Genau daran ist It. 22 gescheitert – eine alte
-  // IP-Position (Lausanne) lag monatelang im Speicher und lieferte still
-  // falsche Distanzen, waehrend JB im Wallis stand.
-  const NET_POS_MAX_AGE_MS = 60 * 60 * 1000;
-
-  function storePosition(lat, lon, src, acc) {
-    saveLastPos({ lat: lat, lon: lon, ts: Date.now(), src: src, acc: acc || null });
+  const POS_SRC_LABEL = {
+    gps: 'Ortung', shortcut: 'Kurzbefehl', net: 'Internet (ungefähr)'
+  };
+  function storePosition(lat, lon, src) {
+    saveLastPos({ lat: lat, lon: lon, ts: Date.now(), src: src });
+    saveManualCity(''); // echte Position schlaegt den Hand-Ort
     if (!geolocOn()) saveGeoloc(true);
   }
+  // Zwei Zahlen aus beliebigem Text ziehen und auf Plausibilitaet pruefen.
+  // Der Kurzbefehl liefert «47.2088, 7.5323»; wir sind bewusst grosszuegig,
+  // damit auch «47.2088,7.5323» oder eine Zeile mit Text drumherum passt.
+  function parseCoords(text) {
+    if (!text) return null;
+    const m = String(text).match(/(-?\d{1,3}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)/);
+    if (!m) return null;
+    const lat = parseFloat(m[1].replace(',', '.'));
+    const lon = parseFloat(m[2].replace(',', '.'));
+    if (isNaN(lat) || isNaN(lon)) return null;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    return { lat: lat, lon: lon };
+  }
+
+  // Weg 1: Koordinaten stehen in der Adresse. Beide Schreibweisen werden
+  // gelesen (Fragezeichen- und Rautenteil), weil iOS beim Oeffnen aus einem
+  // Kurzbefehl mal die eine, mal die andere durchreicht. Danach wird die
+  // Adresse aufgeraeumt, sonst klebt eine alte Position beim naechsten Start
+  // noch drin und die App meldet einen Standort von gestern.
+  // iPhone/iPad erkennen: dort laeuft die Ortung seit It. 21 ausschliesslich
+  // ueber den Kurzbefehl (JB: alles andere war unzuverlaessig oder hat den
+  // Start ausgebremst). Am Computer bleibt die Browser-Ortung, die dort
+  // zuverlaessig arbeitet.
+  function isApplePhone() {
+    const ua = navigator.userAgent || '';
+    return /iPhone|iPod|iPad/.test(ua)
+      || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); // iPad ab iPadOS 13
+  }
+  // Startet den Kurzbefehl und laesst ihn die App danach wieder oeffnen.
+  // Der x-callback-Weg ist bei Apple dokumentiert: Shortcuts haengt die
+  // Textausgabe des Kurzbefehls als «result» an die x-success-Adresse an.
+  // Die App liest daraus die Adresse und schlaegt die Koordinaten selbst
+  // nach – der Kurzbefehl muss also nur noch die Adresse liefern.
+  // It. 22 (JB 08-04): Der Kurzbefehl oeffnet die App am Schluss SELBST mit
+  // «URLs öffnen» und `#addr=…`. Dieser Weg ist seit It. 14 auf JBs iPhone
+  // bestaetigt, der x-callback-Rueckweg war es nicht – und genau dort ist
+  // der erste Anlauf steckengeblieben. Der Rueckkanal ueber «result» wird
+  // weiterhin gelesen, falls x-callback bei ihm doch funktioniert.
+  function runLocationShortcut() {
+    location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(loadShortcutName());
+  }
+  // Der Kurzbefehl liefert die Adresse oft mehrzeilig («Bahnhofstrasse 2»,
+  // Zeilenumbruch, «3930 Visp», Zeilenumbruch, «Schweiz»). Nominatim
+  // versteht Zeilenumbrueche NICHT und findet dann gar nichts – genau daran
+  // ist der erste Anlauf gescheitert (JB 08-04, es wurde still mit einer
+  // alten Position weitergerechnet). Darum zuerst putzen.
+  function cleanAddress(raw) {
+    let t = String(raw || '').trim();
+    // It. 23 (JB 08-04): Der Kurzbefehl reichte die GANZE Adresszeile durch,
+    // also «webapp://jbplayer06.github.io/MovieView/#addr=3930 Visp». Damit
+    // kann kein Kartendienst etwas anfangen, die Suche lief ins Leere und
+    // JB sah wieder eine falsche Distanz. Sieht der Text nach einem Link
+    // aus, holen wir gezielt den Nutzteil heraus.
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t) || /[?#][^\s]*=/.test(t)) {
+      const teil = t.split(/[?#]/).slice(1).join('&');
+      let drin = null;
+      try {
+        const p = new URLSearchParams(teil.replace(/&amp;/g, '&'));
+        drin = p.get('addr') || p.get('result') || p.get('q') || p.get('text');
+      } catch (e) {}
+      if (drin) t = drin;
+      else {
+        // Kein bekannter Parameter: wenigstens Schema, Server und Pfad weg
+        t = t.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, '')
+             .replace(/^[^?#]*[?#]?/, '')
+             .replace(/^[a-z_]+=/i, '');
+      }
+      try { t = decodeURIComponent(t.replace(/\+/g, ' ')); } catch (e) {}
+    }
+    return t
+      .replace(/\s*\n\s*/g, ', ')          // Zeilenumbrueche zu Kommas
+      .replace(/\s+/g, ' ')                 // Mehrfach-Leerzeichen weg
+      .replace(/,\s*(Schweiz|Suisse|Svizzera|Svizra|Switzerland|CH)\s*$/i, '')
+      .replace(/(^[,\s]+|[,\s]+$)/g, '')
+      .trim();
+  }
+  // Baut aus der Adresse mehrere Suchanlaeufe, vom genauesten zum groebsten.
+  // Eine vierstellige Schweizer Postleitzahl trifft immer, darum ist sie die
+  // letzte Rueckfallebene.
+  function addressQueries(addr) {
+    const list = [addr];
+    const plz = (addr.match(/\b(\d{4})\b/) || [])[1];
+    // «3930 Visp» aus dem Ganzen herausziehen, falls eine Strasse davorsteht
+    const plzOrt = addr.match(/\b(\d{4})\s+([A-Za-zÄÖÜäöüéèàâôû.\- ]{2,40})/);
+    if (plzOrt) list.push(plzOrt[1] + ' ' + plzOrt[2].trim());
+    if (plz) list.push(plz);
+    // Letzter Teil nach dem Komma ist meistens der Ort
+    const teile = addr.split(',').map(t => t.trim()).filter(Boolean);
+    if (teile.length > 1) list.push(teile[teile.length - 1]);
+    return list.filter((v, i, a) => v && a.indexOf(v) === i);
+  }
+  // Adresse zu Koordinaten (OpenStreetMap/Nominatim), fuer den Kurzbefehl-Weg.
+  // Probiert die Anlaeufe der Reihe nach und meldet ehrlich zurueck, welcher
+  // Ort erkannt wurde – oder dass gar nichts gefunden wurde.
+  function geocodeAddress(query, onDone) {
+    const addr = cleanAddress(query);
+    const tries = addressQueries(addr);
+    const next = i => {
+      if (i >= tries.length) { onDone(false, { addr: addr }); return; }
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ch&q='
+        + encodeURIComponent(tries[i]);
+      fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => (r.ok ? r.json() : []))
+        .then(res => {
+          const hit = res && res[0];
+          if (!hit || !hit.lat) { next(i + 1); return; }
+          storePosition(parseFloat(hit.lat), parseFloat(hit.lon), 'shortcut');
+          lastGeoAddr = { addr: addr, used: tries[i], name: shortPlace(hit.display_name) };
+          onDone(true, lastGeoAddr);
+        })
+        .catch(() => next(i + 1));
+    };
+    next(0);
+  }
+  // Aus Nominatims langem Namen die ersten zwei Teile, mehr braucht niemand
+  function shortPlace(name) {
+    return String(name || '').split(',').slice(0, 2).map(s => s.trim()).join(', ');
+  }
+  // Zuletzt eingegangene Adresse, fuer die Diagnose-Zeile
+  let lastGeoAddr = null;
 
   // Kurze, selbst verschwindende Meldung. Fuer Rueckmeldungen, die man zur
-  // Kenntnis nimmt und nicht wegklicken will – etwa «Standort aktualisiert».
+  // Kenntnis nimmt und nicht wegklicken will – etwa «Standort erkannt».
   let toastTimer = null;
   function toast(text) {
     const el = document.getElementById('toast');
@@ -2226,11 +2315,114 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
   }
+  // Adresse von Hand eingeben und nachschlagen (It. 22, seit It. 23 auch
+  // direkt aus dem Standort-Menue erreichbar)
+  async function askAddressAndLocate() {
+    const eingabe = await promptDialog('Adresse oder Ort',
+      'Zum Beispiel «3930 Visp» oder «Bahnhofstrasse 2, 3930 Visp».', '', 'Suchen');
+    if (!eingabe) return;
+    toast('Adresse wird gesucht …');
+    geocodeAddress(eingabe, (ok, info) => {
+      if (ok) { afterPositionChange(); toast('Standort erkannt: ' + info.name); return; }
+      infoDialog('Adresse nicht gefunden',
+        'Zu «' + eingabe + '» findet OpenStreetMap keinen Ort in der Schweiz. '
+        + 'Versuch es mit der Postleitzahl und dem Ortsnamen, zum Beispiel «3930 Visp».');
+    });
+  }
+  // Erklaerung zum jeweiligen Fehlerfall als eigener Dialog
+  function geoErrorDetailsDialog(err) {
+    const d = geoErrorDetails(err);
+    return infoDialog(d.title, d.text, 'Verstanden');
+  }
 
-  // Notnagel: grobe Ortung ueber die Internetverbindung. Kein Schluessel,
-  // kein Konto, laeuft leise im Hintergrund und nur, wenn nichts Besseres da
-  // ist – also wenn die echte Ortung scheitert UND noch nie eine Position da
-  // war.
+  // Eine Adresse ist eingetroffen: nachschlagen und EHRLICH melden, was
+  // dabei herauskam. Vorher rechnete die App bei einem Fehlschlag stumm mit
+  // der alten Position weiter – JB sah nur eine falsche Distanz und konnte
+  // nicht wissen, woher sie kam (JB 08-04, Lausanne statt Wallis).
+  function handleIncomingAddress(addr) {
+    geocodeAddress(addr, (ok, info) => {
+      if (ok) {
+        afterPositionChange();
+        toast('Standort erkannt: ' + info.name);
+        return;
+      }
+      const alt = loadLastPos();
+      infoDialog('Adresse nicht gefunden',
+        'Der Kurzbefehl hat «' + (info && info.addr ? info.addr : addr) + '» geliefert, '
+        + 'dazu findet OpenStreetMap aber keinen Ort in der Schweiz. '
+        + (alt && alt.lat
+            ? 'Die App rechnet darum weiter ab der zuletzt bekannten Position – die kann alt sein und weit danebenliegen. '
+            : 'Es wird darum ab Solothurn gerechnet. ')
+        + 'Prüfe im Kurzbefehl, dass die Adresse als Text mit Postleitzahl und Ort herauskommt, '
+        + 'zum Beispiel «3930 Visp».');
+    });
+  }
+  // Liest Standort-Angaben aus der Adresse: entweder fertige Koordinaten
+  // (alter Weg, bleibt als Rueckfall) oder eine Adresse als Text, die
+  // nachgeschlagen wird. «result» ist der Parameter, den die Kurzbefehle-App
+  // beim x-callback-Weg selbst anhaengt.
+  // Die Adresse, mit der die App gestartet wurde – roh, fuer die Diagnose.
+  // Damit laesst sich am Geraet nachsehen, was der Kurzbefehl wirklich
+  // uebergeben hat, statt es raten zu muessen (It. 24).
+  let startHref = '';
+  try { startHref = decodeURIComponent(location.href); } catch (e) { startHref = location.href; }
+
+  function applyUrlCoords(onGeocoded) {
+    try {
+      const parse = s => new URLSearchParams(s);
+      const q = parse(location.search.replace(/^\?/, ''));
+      const h = parse(location.hash.replace(/^#/, ''));
+      const pick = k => q.get(k) || h.get(k);
+      const cleanUrl = (imPfad) => {
+        if (!history.replaceState) return;
+        const keep = new URLSearchParams(location.search.replace(/^\?/, ''));
+        ['lat', 'lon', 'pos', 'key', 'addr', 'result'].forEach(k => keep.delete(k));
+        const s = keep.toString();
+        // Steckte die Adresse im PFAD, muss auch der zurueckgesetzt werden,
+        // sonst klebt sie dort und wird bei jedem Wechsel in die App erneut
+        // gelesen – dann bliebe fuer immer der Ort von damals stehen.
+        const pfad = imPfad ? location.pathname.replace(/[^/]*$/, '') : location.pathname;
+        history.replaceState(null, '', pfad + (s ? '?' + s : ''));
+      };
+      let c = null;
+      if (pick('lat') && pick('lon')) c = parseCoords(pick('lat') + ',' + pick('lon'));
+      else if (pick('pos')) c = parseCoords(pick('pos'));
+      if (c) { storePosition(c.lat, c.lon, 'shortcut'); cleanUrl(); return true; }
+      // Adresse: der Kurzbefehl gibt Strasse, PLZ und Ort als Text zurueck
+      let addr = (pick('addr') || pick('result') || '').trim();
+      let ausPfad = false;
+      // FANGNETZ (It. 24, JB 08-04): Wenn der Kurzbefehl die Adresse ohne
+      // Parameter anhaengt – so wie «…/MovieView/ 3956 Guttet-Feschel» –,
+      // landet sie im PFAD statt in einem Feld, das man abfragen kann. Dann
+      // suchen wir sie im ganzen Link: Eine vierstellige Zahl mit Ortsnamen
+      // dahinter ist in der Schweiz eindeutig eine Postleitzahl, und in der
+      // normalen App-Adresse kommt so etwas nicht vor.
+      if (!addr) {
+        // WICHTIG: nur der Teil NACH dem Server wird durchsucht. Nimmt man
+        // die ganze Adresse, geht auch eine Portnummer wie «:8763» als
+        // Postleitzahl durch – im Test genau so passiert.
+        let roh = location.pathname + location.search + location.hash;
+        try { roh = decodeURIComponent(roh); } catch (e) {}
+        // Den API-Key ausklammern, sonst koennte eine Ziffernfolge darin
+        // faelschlich als Postleitzahl durchgehen
+        roh = roh.replace(/[?&#]key=[^&#]*/gi, '');
+        const treffer = roh.match(/(?:^|[^\d])(\d{4})(?!\d)(?:[\s,]+([A-Za-zÄÖÜäöüÉÈÀÂÔÛéèàâôûß.\-']{2,40}(?:[\s-][A-Za-zÄÖÜäöüéèàâôûß.\-']{2,40})?))?/);
+        if (treffer) { addr = (treffer[1] + ' ' + (treffer[2] || '')).trim(); ausPfad = true; }
+      }
+      if (addr) {
+        // Steht ausnahmsweise doch ein Koordinatenpaar drin, direkt nehmen
+        const asCoords = parseCoords(addr);
+        if (asCoords) { storePosition(asCoords.lat, asCoords.lon, 'shortcut'); cleanUrl(ausPfad); return true; }
+        cleanUrl(ausPfad);
+        if (onGeocoded) onGeocoded(addr);
+        return 'pending'; // Ergebnis kommt erst nach der Antwort aus dem Netz
+      }
+      return false;
+    } catch (e) { return false; }
+  }
+
+  // Weg 2: grobe Ortung ueber die Internetverbindung. Kein Schluessel, kein
+  // Konto, laeuft leise im Hintergrund und nur, wenn nichts Besseres da ist.
   // Im WLAN trifft das meist die richtige Stadt, im Mobilfunknetz kann es
   // deutlich danebenliegen – darum wird die Quelle mitgespeichert und in der
   // Diagnose als «ungefaehr» ausgewiesen.
@@ -2239,9 +2431,10 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     if (netPosTried) { if (onDone) onDone(false); return; }
     netPosTried = true;
     const fresh = loadLastPos();
-    // Eine echte Ortung nie durch eine grobe ersetzen – auch keine alte:
-    // ungenau, aber vom Geraet gemessen, schlaegt geraten aus der IP-Adresse.
-    if (fresh && fresh.lat && fresh.src !== 'net') { if (onDone) onDone(false); return; }
+    // Eine echte Position (Ortung oder Kurzbefehl) nie durch eine grobe ersetzen
+    if (fresh && fresh.lat && fresh.src !== 'net' && Date.now() - (fresh.ts || 0) < POS_TTL_MS) {
+      if (onDone) onDone(false); return;
+    }
     const done = ok => { if (onDone) onDone(ok); };
     fetch('https://ipwho.is/', { cache: 'no-store' })
       .then(r => r.json())
@@ -2430,20 +2623,36 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       .catch(() => {}); // ohne Netz bleibt einfach die bisherige Distanz-Logik
   }
 
-  // Referenzpunkt für Distanzen: der bekannte Standort, sonst Solothurn.
+  // Von Hand gewaehlter Ort (It. 11): Rettungsanker, wenn iOS die Ortung in
+  // der Home-App verweigert. Schlaegt den Live-Standort bewusst – wer den
+  // Ort setzt, meint es so; der Standort-Knopf im Kino-Fenster loescht ihn
+  // bei Erfolg wieder.
+  const loadShortcutName = () => localStorage.getItem(STORAGE_KEYS.shortcut) || DEFAULT_SHORTCUT;
+  const saveShortcutName = v => {
+    if (v) localStorage.setItem(STORAGE_KEYS.shortcut, v);
+    else localStorage.removeItem(STORAGE_KEYS.shortcut);
+  };
+  const loadManualCity = () => localStorage.getItem(STORAGE_KEYS.manualCity) || '';
+  const saveManualCity = v => {
+    if (v) localStorage.setItem(STORAGE_KEYS.manualCity, v);
+    else localStorage.removeItem(STORAGE_KEYS.manualCity);
+  };
+
+  // Referenzpunkt für Distanzen: von Hand gewaehlter Ort, sonst
+  // freigegebener Standort, sonst Solothurn.
   // live = true heisst: die Referenz ist bewusst JBs Position (Top-3 zeigen).
-  // Eine gemessene Position gilt ohne Haltbarkeitsgrenze weiter (JB-Entscheid
-  // It. 21) – eine geschaetzte aus der Internetverbindung dagegen nur eine
-  // Stunde lang, sonst rechnet die App irgendwann still ab einer Stadt, in
-  // der JB laengst nicht mehr ist.
   function distanceReference() {
+    const manual = loadManualCity();
+    if (manual) {
+      const c = cityToCoords(manual);
+      if (c) return { lat: c.lat, lon: c.lon, live: true, manual: true };
+    }
     if (geolocOn()) {
       const p = loadLastPos();
-      const grob = p && p.src === 'net';
-      const abgelaufen = grob && Date.now() - (p.ts || 0) > NET_POS_MAX_AGE_MS;
-      if (p && p.lat && !abgelaufen) {
-        return { lat: p.lat, lon: p.lon, live: true, approx: !!grob };
-      }
+      // It. 12: approx markiert eine Position, die nur ueber die Internet-
+      // verbindung geschaetzt wurde. Die Distanzen stimmen dann nur grob,
+      // darum sagt das Abzeichen an der Kino-Zeile ehrlich «netz» statt «auto».
+      if (p && p.lat) return { lat: p.lat, lon: p.lon, live: true, approx: p.src === 'net' };
     }
     return { lat: HOME_POS.lat, lon: HOME_POS.lon, live: false };
   }
@@ -2633,93 +2842,45 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     return list;
   }
 
-  // ---------- DIE ORTUNG SELBST (It. 25) ----------
-  // Warum nicht einfach getCurrentPosition: iOS antwortet darauf oft mit dem
-  // erstbesten Wert aus der Funkzelle oder dem WLAN, und der liegt gerne
-  // 1000 bis 3000 Meter daneben. Den genauen GPS-Wert schiebt das Geraet
-  // erst ein paar Sekunden spaeter nach – nur nimmt getCurrentPosition den
-  // gar nicht mehr entgegen, es ist ja schon fertig. Genau daher kamen die
-  // Distanzen, die «fast stimmten».
-  //
-  // Darum watchPosition und ein kleines Wettrennen:
-  //   • jeder eingehende Wert wird mit dem bisher besten verglichen,
-  //     gemessen an der Genauigkeit, die das Geraet selbst mitliefert
-  //   • ist ein Wert genauer als GOOD_ACC_M, sind wir sofort fertig
-  //   • nach SOFT_MS nehmen wir, was da ist – Hauptsache eine Position
-  //   • nach HARD_MS gilt die Abfrage als gescheitert. Das faengt auch den
-  //     Fall, in dem iOS gar nichts meldet, weder Erfolg noch Fehler.
-  //   • die Genauigkeit wird mitgespeichert, damit die App spaeter sagen
-  //     kann, wie verlaesslich eine Distanz ist.
-  const GOOD_ACC_M = 100;    // ab hier gut genug fuer Distanzen auf km-Ebene
-  const SOFT_MS    = 7000;   // so lange warten wir auf etwas Besseres
-  const HARD_MS    = 16000;  // danach ist Schluss
-
-  let posBusy = false;       // verhindert zwei Abfragen gleichzeitig
-
+  // Standort holen (nur wenn eingeschaltet). Läuft leise im Hintergrund;
+  // bei Erfolg werden offene Ansichten aktualisiert. Geolocation braucht
+  // HTTPS oder localhost – über file:// scheitert sie, dann bleibt Solothurn.
   function refreshPosition(force, onDone) {
-    const done = (ok, err) => { if (onDone) onDone(ok, err); };
-    if (!geolocOn()) { done(false); return; }
-    // Frische, gemessene Position: nicht nochmals fragen. Eine grobe
-    // Netz-Position zaehlt hier bewusst nicht als frisch, sie soll bei jeder
-    // Gelegenheit durch eine echte ersetzt werden.
+    if (!geolocOn()) { if (onDone) onDone(false); return; }
+    // It. 23: Auf dem iPhone tritt die Browser-Ortung nur noch an, wenn JB
+    // sie ausdruecklich anstoesst (Fadenkreuz, force = true). Beim Start
+    // bleibt sie aussen vor, weil sie dort bis zu 13 Sekunden hing und den
+    // Start ausgebremst hat. WARUM ueberhaupt wieder: Der Fall ist auf
+    // identischer Hardware geloest worden (iPhone 17 Pro, iOS 26), nachdem
+    // die Ortungs- und Datenschutz-Freigaben einmal zurueckgesetzt wurden –
+    // dann klappt die Ortung auch in der Home-App und es braucht gar keinen
+    // Kurzbefehl mehr. Solange das nicht gemacht ist, faellt der Knopf
+    // sauber auf den Kurzbefehl zurueck.
+    if (isApplePhone() && !force) { if (onDone) onDone(false, { code: 'nur-kurzbefehl' }); return; }
     const last = loadLastPos();
-    if (!force && last && last.lat && last.src !== 'net'
-        && Date.now() - (last.ts || 0) < POS_TTL_MS) { done(true); return; }
-    // Ohne https gibt das Geraet den Standort grundsaetzlich nicht her.
-    if (!window.isSecureContext) { done(false, { code: 'kein-https' }); return; }
-    if (!navigator.geolocation || !navigator.geolocation.watchPosition) {
-      done(false, { code: 2 }); return;
+    if (!force && last && Date.now() - (last.ts || 0) < POS_TTL_MS) { if (onDone) onDone(true); return; }
+    if (!navigator.geolocation) { if (onDone) onDone(false); return; }
+    let settled = false;
+    const finish = (ok, err) => { if (settled) return; settled = true; if (onDone) onDone(ok, err); };
+    // Home-Bildschirm-App: iOS kann den «Erlauben?»-Dialog dort nicht
+    // anzeigen (bekannte WebKit-Eigenheit, er landet quasi im falschen
+    // Fenster). Die Abfrage bleibt dann stumm haengen, nicht mal der eigene
+    // timeout feuert. Eigene Stoppuhr erkennt das und meldet es als eigenen
+    // Fall, damit der Schalter die richtige Anleitung zeigen kann.
+    if (navigator.standalone === true) {
+      setTimeout(() => finish(false, { code: 'standalone-stumm' }), 13500);
     }
-    if (posBusy) { done(false, { code: 'laeuft' }); return; }
-    posBusy = true;
-
-    let best = null, watchId = null, letzterFehler = null;
-    let settled = false, softTimer = null, hardTimer = null;
-
-    const stop = () => {
-      if (watchId !== null) {
-        try { navigator.geolocation.clearWatch(watchId); } catch (e) {}
-        watchId = null;
-      }
-      clearTimeout(softTimer); clearTimeout(hardTimer);
-      posBusy = false;
-    };
-    const finish = (ok, err) => {
-      if (settled) return;
-      settled = true;
-      stop();
-      if (ok && best) storePosition(best.lat, best.lon, 'gps', best.acc);
-      done(ok, err);
-    };
-
-    softTimer = setTimeout(() => { if (best) finish(true); }, SOFT_MS);
-    hardTimer = setTimeout(() => {
-      // Nichts gekommen: entweder der letzte echte Fehler, oder – wenn das
-      // Geraet gar nichts gesagt hat – unser eigener Fall «stumm».
-      finish(false, letzterFehler || { code: 'stumm' });
-    }, HARD_MS);
-
-    try {
-      watchId = navigator.geolocation.watchPosition(
-        pos => {
-          const c = pos && pos.coords;
-          if (!c || c.latitude == null) return;
-          const acc = (c.accuracy != null && !isNaN(c.accuracy)) ? c.accuracy : 99999;
-          if (!best || acc < best.acc) best = { lat: c.latitude, lon: c.longitude, acc: acc };
-          if (best.acc <= GOOD_ACC_M) finish(true);
-        },
-        err => {
-          letzterFehler = err;
-          // Fehlende Freigabe wird nicht besser, wenn man wartet.
-          if (err && err.code === 1) { finish(false, err); return; }
-          // Alles andere: haben wir schon etwas, reicht das.
-          if (best) finish(true);
-        },
-        { enableHighAccuracy: true, timeout: HARD_MS, maximumAge: 0 }
-      );
-    } catch (e) {
-      finish(false, { code: 2 });
-    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        saveLastPos({ lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() });
+        finish(true);
+      },
+      // Fehler mitgeben: der Schalter unterscheidet damit «keine Freigabe»
+      // von «kein Signal» und «zu langsam» (vorher gab es nur eine
+      // Einheitsmeldung, mit der niemand etwas anfangen konnte)
+      err => finish(false, err),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 5 * 60 * 1000 }
+    );
   }
 
   // Ein Fehlertext fuer alle Standort-Abfragen (Schalter und Knopf im
@@ -2751,42 +2912,43 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
   }
   function geoErrorDialogInner(err, infoDialog) {
     const code = err && err.code;
-    if (code === 'kein-https') {
-      infoDialog('Standort braucht https',
-        'Dein Gerät gibt den Standort nur an Seiten weiter, die über eine sichere https-Adresse laufen. '
-        + 'Die App läuft gerade nicht so, darum blockt das System die Abfrage – egal, was du freigibst. '
-        + 'Bis dahin werden Distanzen ab Solothurn gerechnet.');
-    } else if (code === 'laeuft') {
-      infoDialog('Suche läuft schon',
-        'Die App fragt gerade bereits nach deinem Standort. Einen Moment warten, dann steht er da.');
-    } else if (code === 1) { // PERMISSION_DENIED
+    // Als Home-Bildschirm-App kann iOS die «Erlauben?»-Nachfrage nicht
+    // anzeigen (bekannte WebKit-Eigenheit). In Safari klappt es darum,
+    // in der Home-App nicht – ausser die Freigabe steht SCHON fest.
+    if (code === 'nur-kurzbefehl') {
+      infoDialog('Standort holst du über das Fadenkreuz',
+        'Beim Start ortet die App auf dem iPhone bewusst nicht mehr selbst, das hat jedes Öffnen verzögert. '
+        + 'Tippe im Fenster «Kinos in der Nähe» oben auf das Fadenkreuz, dann versucht sie es sofort '
+        + 'und bietet dir sonst den Kurzbefehl oder die Eingabe von Hand an.');
+    } else if (navigator.standalone === true && (code === 1 || code === 'standalone-stumm')) {
+      infoDialog('Ortung in der Home-App freischalten',
+        'iOS zeigt die «Erlauben?»-Nachfrage in einer Home-Bildschirm-App nicht an, darum bleibt die Freigabe leer. '
+        + 'Bei einem anderen Entwickler mit genau deinem Gerät (iPhone 17 Pro, iOS 26) hat diese Reihenfolge geholfen: '
+        + '(1) Einstellungen → Allgemein → «iPhone übertragen oder zurücksetzen» → Zurücksetzen → «Standort & Datenschutz zurücksetzen». '
+        + 'Das setzt nur die Freigaben zurück, deine Daten bleiben. '
+        + '(2) Die App vom Home-Bildschirm löschen. '
+        + '(3) Die Seite in Safari öffnen, den Standort dort wirklich abfragen und mit «Erlauben» bestätigen. '
+        + '(4) ERST DANN über Teilen → «Zum Home-Bildschirm» neu anlegen. Die neue App erbt die Freigabe. '
+        + 'Klappt das, brauchst du den Kurzbefehl gar nicht mehr. Bis dahin bleibt er der sichere Weg.');
+    } else if (false && navigator.standalone === true && (code === 1 || code === 'standalone-stumm')) {
+      infoDialog('Standort für die Home-App freischalten',
+        'iOS kann die Standort-Nachfrage in einer Home-Bildschirm-App nicht anzeigen – in Safari geht es darum, hier nicht. '
+        + 'So klappt es trotzdem: Einstellungen → Datenschutz & Sicherheit → Ortungsdienste → Safari-Websites auf «Beim Verwenden der App» stellen '
+        + '(nicht «Fragen»). Zusätzlich in Safari auf der MovieView-Seite: aA-Menü → Website-Einstellungen → Standort → «Erlauben». '
+        + 'Danach die Home-App schliessen und neu öffnen. '
+        + 'Und falls iOS stur bleibt: In der Kino-Verwaltung unter Standort einfach den «Ort von Hand» wählen – dann rechnet die App auch ohne Ortung richtig.');
+    } else if (code === 1) { // PERMISSION_DENIED: Freigabe fehlt oder wurde abgelehnt
       infoDialog('Standort nicht erlaubt',
         'Die Freigabe fehlt oder wurde abgelehnt. Auf dem iPhone: Einstellungen → Datenschutz & Sicherheit → '
-        + 'Ortungsdienste → Safari auf «Beim Verwenden der App» stellen (nicht «Fragen») und «Genauer Standort» '
-        + 'einschalten. Dazu Einstellungen → Apps → Safari → Standort auf «Erlauben». '
+        + 'Ortungsdienste → Safari-Websites auf «Beim Verwenden» stellen, danach nochmals versuchen. '
         + 'Bis dahin werden Distanzen ab Solothurn gerechnet.');
-    } else if (code === 'stumm' && navigator.standalone === true) {
-      // Der bekannteste Fall in einer Home-Bildschirm-App: iOS meldet
-      // ueberhaupt nichts, weder Erfolg noch Fehler. Die einzige belegte
-      // Loesung ist das Zuruecksetzen der Ortungsfreigaben, danach die App
-      // neu anlegen (Entwickler der PWA FindMeSAR, gleiches Geraet).
-      infoDialog('Das iPhone antwortet nicht',
-        'Die App hat 16 Sekunden auf eine Antwort gewartet und gar keine bekommen – weder eine Position '
-        + 'noch einen Fehler. Das passiert in einer Home-Bildschirm-App, wenn die Standort-Freigabe im '
-        + 'Hintergrund hängen geblieben ist. Was bei einem anderen Entwickler mit genau deinem Gerät geholfen hat: '
-        + '(1) Einstellungen → Allgemein → «iPhone übertragen oder zurücksetzen» → Zurücksetzen → '
-        + '«Standort & Datenschutz zurücksetzen» (nur die Freigaben, deine Daten bleiben). '
-        + '(2) Die App vom Home-Bildschirm löschen. '
-        + '(3) Die Seite in Safari öffnen, dort den Standort wirklich abfragen und mit «Erlauben» bestätigen. '
-        + '(4) ERST DANN über Teilen → «Zum Home-Bildschirm» neu anlegen.');
-    } else if (code === 3 || code === 'stumm') { // TIMEOUT
+    } else if (code === 3) { // TIMEOUT: kein Fix innert 12 s
       infoDialog('Standort-Suche abgebrochen',
-        'Es kam kein brauchbarer Standort, zum Beispiel drinnen ohne GPS-Empfang. '
-        + 'Am Fenster oder draußen nochmals versuchen – bis dahin gilt die zuletzt bekannte Position.');
+        'Innert 12 Sekunden kam kein brauchbarer Standort (z.B. drinnen ohne GPS-Empfang). '
+        + 'Versuch es später nochmals – bis dahin gilt Solothurn.');
     } else { // POSITION_UNAVAILABLE oder Unbekanntes
       infoDialog('Standort nicht verfügbar',
-        'Kein Signal – das Gerät konnte keine Position bestimmen. '
-        + 'Es gilt weiter die zuletzt bekannte Position, sonst Solothurn.');
+        'Kein Signal – das Gerät konnte keine Position bestimmen. Distanzen werden weiter ab Solothurn gerechnet.');
     }
   }
 
@@ -3344,6 +3506,10 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
   // ---------- STATUSZEILE: WOHER KOMMEN DIE DISTANZEN? (It. 15) ----------
   function distanceStatusHTML() {
     const ref = distanceReference();
+    if (ref.manual) {
+      return '<span class="cine-auto hand">Hand</span>'
+        + '<span>Distanzen werden ab ' + escapeHTML(loadManualCity()) + ' gerechnet, von dir selbst gewählt.</span>';
+    }
     if (ref.live && ref.approx) {
       return '<span class="cine-auto approx">netz</span>'
         + '<span>Distanzen werden ab einem groben Ort gerechnet, den die App aus deiner Internetverbindung geschätzt hat. Kann einige Kilometer danebenliegen.</span>';
@@ -3353,7 +3519,7 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
         + '<span>Distanzen werden ab deinem aktuellen Standort gerechnet.</span>';
     }
     return '<span class="cine-auto hand">fix</span>'
-      + '<span>Kein Standort bekannt, darum wird ab Solothurn gerechnet. Über den Schalter oben änderst du das.</span>';
+      + '<span>Kein Standort bekannt, darum wird ab Solothurn gerechnet. Über den Schalter oben oder «Ort von Hand» änderst du das.</span>';
   }
 
   // ---------- SCHWEBENDE AUSWAHLLISTE (It. 15) ----------
@@ -3818,10 +3984,7 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
         ${trailer ? `
           <div class="trailer-header">
             <span class="trailer-label">Trailer</span>
-            <span class="trailer-actions">
-              <button type="button" class="trailer-yt-link" id="trailer-wide" data-yt="${trailer.key}">${svgStroke('expand', 12, 2.6)} Breitbild</button>
-              <a class="trailer-yt-link" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${svgStroke('arrowout', 12, 2.6)} YouTube</a>
-            </span>
+            <a class="trailer-yt-link" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${svgStroke('arrowout', 12, 2.6)} Auf YouTube ansehen</a>
           </div>
           <div class="trailer-wrap">
             <iframe src="https://www.youtube-nocookie.com/embed/${trailer.key}?rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -3871,71 +4034,7 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     }
   }
 
-  // ---------- TRAILER IM BREITFORMAT (It. 25b) ----------
-  // Warum ueberhaupt selbst gebaut: Auf dem iPhone laesst sich ein
-  // eingebettetes YouTube-Video nicht ueber die Vollbild-Funktion des
-  // Browsers aufziehen (die gibt es dort nur fuer echte Video-Elemente,
-  // nicht fuer eingebettete Seiten). In einer Home-Bildschirm-App kommt
-  // dazu, dass das Fenster in der Ausrichtung feststeckt, die im Manifest
-  // steht. Beides umgeht dieses Fenster: Es legt sich ueber alles und
-  // dreht den Spieler notfalls selbst.
-  let tfKey = null;
-  function openTrailerFull(key) {
-    if (!key) return;
-    tfKey = key;
-    const win = document.getElementById('trailer-full');
-    const stage = document.getElementById('tf-stage');
-    // Den kleinen Spieler im Sheet anhalten, sonst laufen zwei gleichzeitig
-    const klein = document.querySelector('#sheet-content .trailer-wrap iframe');
-    if (klein) klein.src = klein.src;
-    // playsinline=1 ist Pflicht: sonst reisst iOS das Video in seinen
-    // eigenen Spieler und unser Fenster waere sinnlos.
-    stage.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + key
-      + '?rel=0&modestbranding=1&autoplay=1&playsinline=1" '
-      + 'allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" '
-      + 'allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
-    win.classList.add('show');
-    const hint = document.getElementById('tf-hint');
-    hint.classList.remove('gone');
-    setTimeout(() => hint.classList.add('gone'), 3000);
-    document.body.style.overflow = 'hidden';
-    fitTrailerFull();
-    // Am Computer zusaetzlich echtes Vollbild versuchen. Auf dem iPhone
-    // gibt es das nicht, dort passiert einfach nichts – deshalb still.
-    try { if (win.requestFullscreen) win.requestFullscreen().catch(() => {}); } catch (e) {}
-  }
-  function closeTrailerFull() {
-    const win = document.getElementById('trailer-full');
-    if (!win.classList.contains('show')) return;
-    win.classList.remove('show');
-    document.getElementById('tf-stage').innerHTML = ''; // haelt das Video an
-    document.body.style.overflow = '';
-    tfKey = null;
-    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) {}
-  }
-  // Groesse und Drehung berechnen. Zwei Faelle:
-  //   quer gehalten  -> Bild einfach so gross wie moeglich, 16:9 gewahrt
-  //   hochkant       -> Bild um 90 Grad gedreht, dann ist die BILDSCHIRM-
-  //                     hoehe die Breite des Videos
-  function fitTrailerFull() {
-    const win = document.getElementById('trailer-full');
-    if (!win.classList.contains('show')) return;
-    const stage = document.getElementById('tf-stage');
-    const bw = window.innerWidth, bh = window.innerHeight;
-    const hochkant = bh > bw;
-    const platzB = hochkant ? bh : bw;   // Platz in Blickrichtung des Videos
-    const platzH = hochkant ? bw : bh;
-    let b = platzB, h = b * 9 / 16;
-    if (h > platzH) { h = platzH; b = h * 16 / 9; }
-    stage.style.width = Math.round(b) + 'px';
-    stage.style.height = Math.round(h) + 'px';
-    stage.style.transform = hochkant ? 'rotate(90deg)' : 'none';
-  }
-  window.addEventListener('resize', fitTrailerFull);
-  window.addEventListener('orientationchange', () => setTimeout(fitTrailerFull, 250));
-
   function closeSheet() {
-    closeTrailerFull();
     document.getElementById('sheet').classList.remove('open');
     document.getElementById('sheet-backdrop').classList.remove('open');
     document.body.style.overflow = '';
@@ -3975,6 +4074,17 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     const sw = document.getElementById('geo-switch');
     sw.classList.toggle('on', geolocOn());
     sw.setAttribute('aria-checked', geolocOn() ? 'true' : 'false');
+    // It. 15: «Ort von Hand» erscheint nur, wenn die automatische Ortung aus
+    // ist. Solange sie laeuft, waere eine zweite Standortquelle nur verwirrend.
+    const row = document.getElementById('manual-row');
+    if (row) row.hidden = geolocOn();
+    const sel = document.getElementById('manual-city');
+    if (sel) sel.textContent = cityLabel(loadManualCity());
+    // Kurzbefehl-Zeile: nur am iPhone, dort laeuft die Ortung darueber
+    const scRow = document.getElementById('shortcut-row');
+    if (scRow) scRow.hidden = !isApplePhone();
+    const scName = document.getElementById('shortcut-name');
+    if (scName) scName.textContent = loadShortcutName();
     const st = document.getElementById('cine-status');
     if (st) st.innerHTML = distanceStatusHTML();
     const maps = loadMapsApp();
@@ -4579,6 +4689,37 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       });
     });
 
+    // Ort von Hand: gewaehlter Ort wird sofort zur Distanz-Referenz
+    // «Ort von Hand»: schwebende Auswahlliste statt des Browser-Menues.
+    // «Aus» ist der Startzustand und tut bewusst nichts – wer den Schalter
+    // oben ausgeschaltet hat, will vielleicht gar keinen Standort (JB).
+    document.getElementById('manual-city').addEventListener('click', async () => {
+      // It. 22: Neben den 49 eingebauten Staedten neu auch eine freie
+      // Adresse. Wer wie JB gerade im Wallis ist, findet seinen Ort sonst
+      // nicht in der Liste und haette gar keinen Weg ohne Kurzbefehl.
+      const items = [{ value: '', label: 'Aus' }, { value: '__auto__', label: 'Automatisch' },
+                     { value: '__addr__', label: 'Adresse eingeben …' }]
+        .concat(cityOptions());
+      const cur = loadManualCity() || '';
+      const pick = await listDialog('Ort von Hand', items, cur);
+      if (pick === null) return;
+      if (pick === '__addr__') { askAddressAndLocate(); return; }
+      if (pick === '__auto__') {      // Automatisch = der Schalter oben
+        saveManualCity('');
+        saveGeoloc(true);
+        syncCinemaControls();
+        // Schalter bleibt an, auch wenn nichts kommt (It. 21)
+        if (isApplePhone()) { afterPositionChange(); return; }
+        refreshPosition(true, (ok, err) => {
+          if (!ok) geoErrorDialog(err);
+          afterPositionChange();
+        });
+        return;
+      }
+      saveManualCity(pick);
+      afterPositionChange();
+    });
+
     // Genre-Pfeile ein-/ausblenden (Wischen der Genre-Zeile geht immer)
     document.getElementById('arrows-switch').addEventListener('click', () => {
       localStorage.setItem(STORAGE_KEYS.genreArrows, genreArrowsOn() ? 'off' : 'on');
@@ -4628,9 +4769,13 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       }
       saveGeoloc(true);
       syncCinemaControls();
-      // It. 21: Der Schalter bleibt AN, auch wenn die Ortung scheitert.
-      // Vorher sprang er zurueck auf Aus, und wer ihn brauchte, konnte ihn
-      // danach gar nicht mehr einschalten.
+      // It. 21 (JB 08-04): Der Schalter bleibt AN, auch wenn die Ortung
+      // scheitert. Vorher sprang er zurueck auf Aus – wer den Standort wie
+      // JB ueber den Kurzbefehl bezieht, konnte ihn danach gar nicht mehr
+      // einschalten, weil die Abfrage ja immer scheiterte.
+      // Am iPhone laeuft hier bewusst gar keine Abfrage und darum auch
+      // keine Fehlermeldung: der Standort kommt ueber das Fadenkreuz.
+      if (isApplePhone()) { renderCinemaList(); return; }
       refreshPosition(true, (ok, err) => {
         syncCinemaControls();
         renderCinemaList();
@@ -4663,24 +4808,6 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     document.getElementById('picker-list').addEventListener('click', e => {
       if (e.target.closest('.cinema-add-row')) openCinemaForm(null);
     });
-    // Breitbild-Trailer: der Knopf wird bei jedem Film neu gezeichnet,
-    // darum ueber das Sheet gehorcht statt direkt am Knopf.
-    document.getElementById('sheet-content').addEventListener('click', e => {
-      const b = e.target.closest('#trailer-wide');
-      if (b) { e.preventDefault(); openTrailerFull(b.dataset.yt); }
-    });
-    document.getElementById('tf-close').addEventListener('click', closeTrailerFull);
-    // Tipp auf den schwarzen Rand schliesst ebenfalls. Das Bild selbst
-    // (.tf-stage) ist ausgenommen, sonst waere jeder Tipp auf den Spieler
-    // gleichzeitig ein Schliessen.
-    document.getElementById('trailer-full').addEventListener('click', e => {
-      if (e.target.closest('#tf-stage') || e.target.closest('#tf-close')) return;
-      closeTrailerFull();
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeTrailerFull();
-    });
-
     document.getElementById('picker-close').addEventListener('click', closeCinePicker);
     document.getElementById('picker-add').addEventListener('click', () => openCinemaForm(null));
     // Standort im Kino-Fenster neu holen: Knopf dreht, danach stehen die
@@ -4690,21 +4817,40 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       if (btn.classList.contains('busy')) return; // laeuft schon
       if (!geolocOn()) saveGeoloc(true);          // Knopf schaltet die Ortung gleich mit ein
       btn.classList.add('busy');
-      refreshPosition(true, (ok, err) => {
+      refreshPosition(true, async (ok, err) => {
         btn.classList.remove('busy');
+        if (ok) saveManualCity(''); // echter Standort da -> Hand-Ort abloesen
         syncCinemaControls();
         renderCinemaList();
         renderPickerList();
-        if (ok) {
-          const p = loadLastPos();
-          // Genauigkeit mitsagen: dann sieht JB sofort, ob die Distanz
-          // aufs Haus oder nur aufs Quartier genau ist.
-          const acc = p && p.acc ? ' (auf ' + Math.round(p.acc) + ' m genau)' : '';
-          toast('Standort aktualisiert' + acc);
+        if (ok) { toast('Standort aktualisiert'); return; }
+        // It. 23 (JB 08-04): Statt nur einer Fehlermeldung gibt es am
+        // iPhone die Wahl. Ein Kurzbefehl laesst sich technisch nicht im
+        // Hintergrund starten (Apple bietet dafuer keinen Weg), jeder Weg
+        // dorthin verlaesst die App also kurz – darum soll JB selbst
+        // entscheiden, ob ihm das den Standort wert ist.
+        if (isApplePhone()) {
+          const wahl = await listDialog('Standort holen', [
+            { value: 'sc', label: 'Kurzbefehl «' + loadShortcutName() + '» starten' },
+            { value: 'addr', label: 'Adresse von Hand eingeben' },
+            { value: 'why', label: 'Warum klappt die Ortung nicht?' }
+          ], '');
+          if (wahl === 'sc') { runLocationShortcut(); return; }
+          if (wahl === 'addr') { askAddressAndLocate(); return; }
+          if (wahl === 'why') { geoErrorDetailsDialog(err); return; }
           return;
         }
         geoErrorDialog(err);
       });
+    });
+
+    // Name des Kurzbefehls aendern (It. 21)
+    document.getElementById('shortcut-name').addEventListener('click', async () => {
+      const neu = await promptDialog('Name des Kurzbefehls',
+        'Muss genau so heissen wie in der Kurzbefehle-App.', loadShortcutName(), 'Speichern');
+      if (!neu) return;
+      saveShortcutName(neu);
+      syncCinemaControls();
     });
 
     // Bewertungs-Details
@@ -4843,11 +4989,13 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       + ' · Ortung: ' + (geolocOn() ? 'an' : 'aus')
       + ' · Position: ' + posTxt
       + (pos && pos.lat ? ' · Quelle: ' + (POS_SRC_LABEL[pos.src] || 'Ortung') : '')
-      // Koordinaten und Genauigkeit mitgeben: damit ist am Geraet ablesbar,
-      // ob die App mit einem frischen GPS-Wert oder einer alten Schaetzung
-      // rechnet. Genau das war frueher nicht erkennbar.
+      // It. 22: Koordinaten und zuletzt empfangene Adresse mitgeben. Ohne
+      // das war nicht erkennbar, dass die App noch mit einer alten Position
+      // rechnete, statt mit der frisch gelieferten Adresse.
       + (pos && pos.lat ? ' · Punkt: ' + pos.lat.toFixed(3) + ', ' + pos.lon.toFixed(3) : '')
-      + (pos && pos.acc ? ' · Genauigkeit: ' + Math.round(pos.acc) + ' m' : '');
+      + (lastGeoAddr ? ' · Adresse: «' + lastGeoAddr.addr + '» → ' + lastGeoAddr.name : '')
+      + ' · Startlink: ' + startHref.replace(/[?&#]key=[^&#]*/gi, '').slice(0, 120)
+      + (loadManualCity() ? ' · Hand-Ort: ' + loadManualCity() : '');
     el.textContent = base;
     // Freigabe-Zustand anhaengen (auf iOS notorisch unzuverlaessig, darum
     // nur als Hinweis «laut System»)
@@ -5032,6 +5180,10 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
       else if (DEFAULT_API_KEY) keySource = 'im Code hinterlegt';
     } catch (e) {}
     state.apiKey = loadKey() || DEFAULT_API_KEY || null;
+    // It. 12: Kommt der Start aus dem Kurzbefehl, haengen die Koordinaten an
+    // der Adresse. Muss VOR dem ersten Zeichnen laufen, sonst steht kurz die
+    // alte Distanz da und springt danach.
+    applyUrlCoords(handleIncomingAddress);
     state.watchlist = loadWatchlist();
     state.viewMode = localStorage.getItem(STORAGE_KEYS.viewMode) || 'grid';
     mountIcons();
@@ -5050,23 +5202,38 @@ body.light .hr-card { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 0.
     loadCinemas();           // trägt fehlende Adressen der Standard-Kinos nach (It. 9)
     // Standort ist ab Werk an (It. 9): Position gleich beim Start holen,
     // dann stimmen Distanzen und «Kinos in der Nähe» ohne jedes Zutun.
-    // Läuft leise im Hintergrund und hält nichts auf. It. 25: Das gilt
-    // wieder auf ALLEN Geräten, auch am iPhone – der Umweg über den
-    // Kurzbefehl ist weg. Scheitert die Ortung und gab es noch nie eine
-    // Position, springt still die grobe Netz-Ortung ein.
-    refreshPosition(false, ok => {
-      if (ok) { afterPositionChange(); return; }
+    // Läuft leise im Hintergrund; ohne Freigabe bleibt einfach Solothurn.
+    // It. 12: Scheitert die Ortung (Home-App), springt still die grobe
+    // Ortung ueber die Internetverbindung ein – besser als Solothurn zu raten.
+    // It. 21 (JB 08-04): Auf dem iPhone startet die App OHNE jeden
+    // Ortungsversuch. Weder die Browser-Abfrage noch die grobe Netz-Ortung
+    // laufen dort noch – beide haben den Start verzoegert und nichts
+    // Brauchbares geliefert. Der Standort kommt ueber das Fadenkreuz, bis
+    // dahin gilt die zuletzt bekannte Position (oder Solothurn).
+    if (!isApplePhone()) {
+      refreshPosition(false, ok => { if (!ok) fetchNetPosition(); });
+    } else {
+      // It. 22: Eine alte Position aus der Netz-Ortung einmalig wegwerfen.
+      // Sie stammt aus der Zeit, als die App noch selbst geortet hat, kann
+      // Dutzende Kilometer danebenliegen (bei JB stand Lausanne drin,
+      // waehrend er im Wallis war) und wird auf dem iPhone nie mehr
+      // aufgefrischt – sie wuerde also fuer immer falsche Distanzen liefern.
       const alt = loadLastPos();
-      if (!alt || !alt.lat) fetchNetPosition();
-    });
-    // Zurück in der App: Position auffrischen, wenn sie älter als 10 Minuten
-    // ist. Genau dann ist JB unterwegs gewesen und die Distanzen stimmen
-    // nicht mehr. iOS lädt eine Home-Bildschirm-App beim Zurückholen oft
-    // NICHT neu, darum ist dieser Weg die einzige Gelegenheit dazu.
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) return;
-      refreshPosition(false, ok => { if (ok) afterPositionChange(); });
-    });
+      if (alt && alt.src === 'net') {
+        try { localStorage.removeItem(STORAGE_KEYS.lastPos); } catch (e) {}
+      }
+    }
+    // Kommt der Start aus dem Kurzbefehl, steht die Adresse (oder ein altes
+    // Koordinatenpaar) im Link. Zusaetzlich horchen wir auf spaetere
+    // Aufrufe: bringt iOS eine schon laufende Home-App nur nach vorne,
+    // aendert sich bloss der Rautenteil oder die Sichtbarkeit, aber die
+    // Seite laedt nicht neu.
+    const onUrlPos = () => {
+      const r = applyUrlCoords(handleIncomingAddress);
+      if (r === true) afterPositionChange(); // Koordinaten standen direkt drin
+    };
+    window.addEventListener('hashchange', onUrlPos);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) onUrlPos(); });
     render();
     if (!state.apiKey) showSetup();
     else loadAll();
